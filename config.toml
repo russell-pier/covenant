@@ -1,8 +1,5 @@
-# Configuration for 2D Minecraft-like World Generator
-# Main application settings
-
 [application]
-title = "2D Minecraft World - Spiral Generation"
+title = "Covenant"
 version = "0.1.0"
 
 [window]
@@ -14,6 +11,32 @@ vsync = true
 center_x = 0
 center_y = 0
 radius = 50
+generator_type = "pipeline"  # "spiral" or "pipeline"
+seed = 12345  # Random seed for chunk generation
+chunk_size = 16  # Size of each chunk in tiles
+
+# World generation pipeline configuration
+pipeline_layers = [
+    "lands_and_seas",
+    "zoom",
+    "zoom"
+]
+
+# Layer-specific configurations
+[world.lands_and_seas]
+land_ratio = 1  # Start with low land ratio (1:10)
+algorithm = "random_chunks"
+
+[world.zoom]
+subdivision_factor = 2
+land_expansion_threshold = 6  # Much higher threshold - land needs many neighbors to expand
+erosion_probability = 0.1
+iterations = 2  # Fewer iterations to prevent runaway growth
+use_multi_pass = false  # Disable multi-pass for simpler, controlled expansion
+fractal_perturbation = false  # Disable for cleaner testing
+edge_noise_boost = false
+add_noise = false
+noise_probability = 0.0
 
 [debug]
 show_debug_on_startup = true

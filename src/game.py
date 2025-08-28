@@ -12,10 +12,17 @@ from .render import GameRenderer
 from .config import get_config
 
 # Game state
-_world_generator = WorldGenerator()
+_config = get_config()
+_world_generator = WorldGenerator(
+    generator_type=_config.world.generator_type,
+    seed=_config.world.seed,
+    chunk_size=_config.world.chunk_size,
+    pipeline_layers=_config.world.pipeline_layers,
+    layer_configs=_config.world.layer_configs,
+    visualize=False  # Set to True to see layer-by-layer generation
+)
 _renderer = GameRenderer()
 _world_generated = False
-_config = get_config()
 
 
 def render_frame(console):
@@ -74,10 +81,6 @@ def handle_input(event):
             status_display = _renderer.get_status_display()
             status_display.toggle_coordinates()
             print(f"Coordinate display: {'ON' if status_display.show_coordinates else 'OFF'}")
-        # F3 key to toggle seamless rendering
-        elif event.sym == tcod.event.KeySym.F3:
-            seamless_enabled = _renderer.toggle_seamless_rendering()
-            print(f"Seamless block rendering: {'ON' if seamless_enabled else 'OFF'}")
     return False
 
 

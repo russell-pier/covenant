@@ -36,6 +36,17 @@ class WorldConfig:
     center_x: int = 0
     center_y: int = 0
     radius: int = 50
+    generator_type: str = "pipeline"
+    seed: int = 12345
+    chunk_size: int = 32
+    pipeline_layers: list = None
+    layer_configs: dict = None
+
+    def __post_init__(self):
+        if self.pipeline_layers is None:
+            self.pipeline_layers = ["lands_and_seas"]
+        if self.layer_configs is None:
+            self.layer_configs = {}
 
 
 @dataclass
@@ -122,10 +133,25 @@ class ConfigLoader:
         
         # World config
         world_data = config_data.get('world', {})
+
+        # Extract pipeline layers and layer configs
+        pipeline_layers = world_data.get('pipeline_layers', ["lands_and_seas"])
+        layer_configs = {}
+
+        # Extract layer-specific configurations
+        for layer_name in pipeline_layers:
+            if layer_name in world_data:
+                layer_configs[layer_name] = world_data[layer_name]
+
         world = WorldConfig(
             center_x=world_data.get('center_x', WorldConfig.center_x),
             center_y=world_data.get('center_y', WorldConfig.center_y),
-            radius=world_data.get('radius', WorldConfig.radius)
+            radius=world_data.get('radius', WorldConfig.radius),
+            generator_type=world_data.get('generator_type', WorldConfig.generator_type),
+            seed=world_data.get('seed', WorldConfig.seed),
+            chunk_size=world_data.get('chunk_size', WorldConfig.chunk_size),
+            pipeline_layers=pipeline_layers,
+            layer_configs=layer_configs
         )
         
         # Debug config

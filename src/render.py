@@ -18,32 +18,19 @@ class WorldRenderer:
 
     def __init__(self):
         self.tile_registry = get_tile_registry()
-        # Characters that should be rendered as seamless blocks
-        # Note: Due to font rendering limitations, true seamless rendering may not be possible
-        # We use background color filling as the best available solution
-        self.seamless_block_chars = {"█", "▓", "▒", "░", "■", "▪", "▫"}
-        # Whether to use seamless rendering for block characters
-        self.use_seamless_rendering = True
 
-    def _render_seamless_tile(self, console: tcod.console.Console, x: int, y: int,
-                             tile_config, use_seamless: bool = True):
+    def _render_tile(self, console: tcod.console.Console, x: int, y: int, tile_config):
         """
-        Render a tile with seamless block character support.
+        Render a tile using its configuration.
 
         Args:
             console: The tcod console to render to
             x: Screen X coordinate
             y: Screen Y coordinate
             tile_config: The tile configuration
-            use_seamless: Whether to use seamless rendering for block characters
         """
-        if use_seamless and tile_config.character in self.seamless_block_chars:
-            # For seamless blocks, use space character with background color filling entire cell
-            console.print(x, y, " ", fg=tile_config.background_color, bg=tile_config.background_color)
-        else:
-            # For regular characters, use normal foreground/background rendering
-            console.print(x, y, tile_config.character,
-                        fg=tile_config.font_color, bg=tile_config.background_color)
+        console.print(x, y, tile_config.character,
+                    fg=tile_config.font_color, bg=tile_config.background_color)
     
     def render_world(self, console: tcod.console.Console, world_generator, 
                     view_center_x: int, view_center_y: int):
@@ -76,8 +63,8 @@ class WorldRenderer:
                 # Get the tile configuration for rendering
                 tile_config = self.tile_registry.get_tile_config(tile.tile_type)
 
-                # Render the tile with seamless block support
-                self._render_seamless_tile(console, screen_x, screen_y, tile_config, self.use_seamless_rendering)
+                # Render the tile
+                self._render_tile(console, screen_x, screen_y, tile_config)
     
     def render_tile_at_screen_pos(self, console: tcod.console.Console, tile: Tile,
                                  screen_x: int, screen_y: int):
@@ -94,8 +81,8 @@ class WorldRenderer:
             # Get the tile configuration for rendering
             tile_config = self.tile_registry.get_tile_config(tile.tile_type)
 
-            # Render the tile with seamless block support
-            self._render_seamless_tile(console, screen_x, screen_y, tile_config, self.use_seamless_rendering)
+            # Render the tile
+            self._render_tile(console, screen_x, screen_y, tile_config)
     
     def render_highlight_at_world_pos(self, console: tcod.console.Console, 
                                     world_x: int, world_y: int, 
@@ -124,11 +111,6 @@ class WorldRenderer:
         # Render if on screen
         if 0 <= screen_x < console.width and 0 <= screen_y < console.height:
             console.print(screen_x, screen_y, highlight_char, fg=highlight_color)
-
-    def toggle_seamless_rendering(self):
-        """Toggle seamless rendering for block characters."""
-        self.use_seamless_rendering = not self.use_seamless_rendering
-        return self.use_seamless_rendering
 
 
 class EffectRenderer:
@@ -240,10 +222,6 @@ class GameRenderer:
     def get_status_display(self) -> StatusDisplay:
         """Get the status display for external configuration."""
         return self.status_display
-
-    def toggle_seamless_rendering(self) -> bool:
-        """Toggle seamless rendering for block characters."""
-        return self.world_renderer.toggle_seamless_rendering()
     
     def world_to_screen(self, world_x: int, world_y: int, view_center_x: int, view_center_y: int, 
                        console_width: int, console_height: int) -> Tuple[int, int]:

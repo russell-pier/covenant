@@ -98,6 +98,12 @@ class TileRegistry:
                 font_color=(200, 200, 200),
                 background_color=(64, 64, 64)
             ),
+            'water': TileConfig(
+                name="Water",
+                character="█",
+                font_color=(64, 128, 255),
+                background_color=(64, 128, 255)
+            ),
             'void': TileConfig(
                 name="Void",
                 character=" ",

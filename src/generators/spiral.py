@@ -95,31 +95,71 @@ class SpiralGenerator:
 class WorldGenerator:
     """Main world generator that can use different generation strategies."""
 
-    def __init__(self):
+    def __init__(self, generator_type: str = "spiral", seed: int = None, chunk_size: int = 32,
+                 pipeline_layers: list = None, layer_configs: dict = None, visualize: bool = False):
+        """
+        Initialize the world generator.
+
+        Args:
+            generator_type: Type of generator to use ("spiral" or "pipeline")
+            seed: Random seed for generation
+            chunk_size: Size of each chunk in tiles
+            pipeline_layers: List of pipeline layers to use
+            layer_configs: Configuration for each layer
+            visualize: Whether to show visualization between layers
+        """
         self.spiral_generator = SpiralGenerator()
-        self.current_generator = self.spiral_generator
+
+        if generator_type == "pipeline":
+            from .pipeline_generator import PipelineWorldGenerator
+            self.pipeline_generator = PipelineWorldGenerator(
+                seed=seed,
+                chunk_size=chunk_size,
+                pipeline_layers=pipeline_layers,
+                layer_configs=layer_configs,
+                visualize=visualize
+            )
+            self.current_generator = self.pipeline_generator
+            self.generator_type = "pipeline"
+        else:
+            self.current_generator = self.spiral_generator
+            self.generator_type = "spiral"
 
     def generate_world(self, center_x: int, center_y: int, radius: int) -> Dict[Tuple[int, int], Tile]:
         """Generate a world using the current generator."""
-        return self.current_generator.generate_spiral(center_x, center_y, radius)
+        if self.generator_type == "spiral":
+            return self.spiral_generator.generate_spiral(center_x, center_y, radius)
+        else:
+            # For chunk generator, pre-load tiles in the radius area
+            tiles = {}
+            for x in range(center_x - radius, center_x + radius + 1):
+                for y in range(center_y - radius, center_y + radius + 1):
+                    tile = self.current_generator.get_tile(x, y)
+                    tiles[(x, y)] = tile
+            return tiles
 
     def generate_for_view(self, center_x: int, center_y: int, view_width: int, view_height: int):
         """Generate tiles specifically for a view area, ensuring full coverage."""
         half_width = view_width // 2
         half_height = view_height // 2
 
-        # Calculate the radius needed to cover the entire view
-        radius = max(half_width, half_height) + 2
+        if self.generator_type == "spiral":
+            # Calculate the radius needed to cover the entire view
+            radius = max(half_width, half_height) + 2
 
-        # Generate the spiral
-        self.current_generator.generate_spiral(center_x, center_y, radius)
+            # Generate the spiral
+            self.spiral_generator.generate_spiral(center_x, center_y, radius)
 
-        # Fill any gaps by ensuring every position in the view has a tile
-        for x in range(center_x - half_width, center_x + half_width + 1):
-            for y in range(center_y - half_height, center_y + half_height + 1):
-                if (x, y) not in self.current_generator.tiles:
-                    # Add a stone tile if missing
-                    self.current_generator.tiles[(x, y)] = Tile(x, y, "stone")
+            # Fill any gaps by ensuring every position in the view has a tile
+            for x in range(center_x - half_width, center_x + half_width + 1):
+                for y in range(center_y - half_height, center_y + half_height + 1):
+                    if (x, y) not in self.spiral_generator.tiles:
+                        # Add a stone tile if missing
+                        self.spiral_generator.tiles[(x, y)] = Tile(x, y, "stone")
+        else:
+            # For chunk generator, just ensure tiles are loaded for the view area
+            # The chunk generator handles this automatically when tiles are requested
+            pass
 
     def get_tile(self, x: int, y: int) -> Tile:
         """Get a tile at the specified coordinates."""

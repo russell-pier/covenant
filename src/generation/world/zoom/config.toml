@@ -1,0 +1,40 @@
+# Zoom Layer Configuration
+# Controls terrain detail refinement through chunk subdivision and cellular automata
+
+[zoom]
+# Subdivision factor - how many sub-chunks per dimension (2 = 2x2 = 4 sub-chunks)
+subdivision_factor = 2
+
+# Cellular automata parameters for natural coastline generation
+land_expansion_threshold = 2  # Lower threshold = more aggressive land expansion
+erosion_probability = 0.05    # Lower erosion = land grows more easily
+iterations = 8                # More iterations for better land growth
+
+# Multi-pass refinement for progressive land expansion
+use_multi_pass = true         # Apply multiple passes with different parameters
+pass_1_iterations = 4         # First pass: aggressive land expansion
+pass_1_expansion_threshold = 1  # Very aggressive expansion
+pass_1_erosion_probability = 0.02  # Minimal erosion
+
+pass_2_iterations = 4         # Second pass: shape refinement
+pass_2_expansion_threshold = 3
+pass_2_erosion_probability = 0.1
+
+# Protection settings
+protect_interior = false      # Allow more variation by not protecting interior
+interior_threshold = 8        # All 8 neighbors must be land to be considered interior
+
+# Advanced settings
+use_moore_neighborhood = true # Use 8-neighbor Moore neighborhood (vs 4-neighbor Von Neumann)
+preserve_islands = true       # Prevent small islands from disappearing completely
+min_island_size = 1          # Minimum size to preserve islands (smaller = more detail)
+
+# Enhanced randomization for fractal variation
+add_noise = true             # Add randomness to prevent perfect patterns
+noise_probability = 0.15     # Higher chance of random land/water flip per iteration
+edge_noise_boost = true      # Extra noise along land/water boundaries
+edge_noise_probability = 0.25 # Higher noise probability at edges
+
+# Fractal enhancement
+fractal_perturbation = true  # Add fractal-like perturbations
+perturbation_strength = 0.3  # Strength of fractal perturbations (0.0-1.0)

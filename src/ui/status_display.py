@@ -151,7 +151,7 @@ class StatusDisplay:
         # Compact help text (max 3 lines)
         help_lines = [
             "Ctrl+Q/ESC: Quit | R: Regenerate world",
-            "F1: Debug | F2: Coordinates | F3: Seamless blocks",
+            "F1: Toggle debug info | F2: Toggle coordinates",
             "Hot reload: Save any .py file to restart"
         ]
 
