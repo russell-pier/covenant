@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Rules for configuring world generation parameters, TOML conventions, and layer configuration patterns"
+---
+
 # Configuration Rules
 
 ## Main Configuration Rules

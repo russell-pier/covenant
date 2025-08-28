@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Rules for working with the world generation pipeline system, adding new layers, and understanding the core architecture"
+---
+
 # World Generation Architecture Rules
 
 ## Pipeline System Rules

@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Rules for optimizing performance, implementing caching strategies, and managing memory in the generation system"
+---
+
 # Performance and Caching Rules
 
 ## Caching Rules

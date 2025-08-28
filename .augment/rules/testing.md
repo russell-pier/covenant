@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Rules for testing generation layers, writing test cases, and validating pipeline functionality"
+---
+
 # Testing Rules
 
 ## Required Test Cases

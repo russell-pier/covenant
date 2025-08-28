@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Rules for creating new generation layers, implementing layer classes, and following established patterns"
+---
+
 # Layer Development Rules
 
 ## Directory Structure Rules
