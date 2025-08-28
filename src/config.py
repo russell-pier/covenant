@@ -41,12 +41,25 @@ class WorldConfig:
     chunk_size: int = 32
     pipeline_layers: list = None
     layer_configs: dict = None
+    # Infinite world settings
+    render_distance: int = 3
+    chunk_cache_limit: int = 100
+    chunk_unload_distance: int = 5
 
     def __post_init__(self):
         if self.pipeline_layers is None:
             self.pipeline_layers = ["lands_and_seas"]
         if self.layer_configs is None:
             self.layer_configs = {}
+
+
+@dataclass
+class CameraConfig:
+    """Camera and viewport configuration."""
+    initial_x: int = 0
+    initial_y: int = 0
+    move_speed: int = 1
+    fast_move_speed: int = 5
 
 
 @dataclass
@@ -83,6 +96,7 @@ class GameConfig:
     application: ApplicationConfig
     window: WindowConfig
     world: WorldConfig
+    camera: CameraConfig
     debug: DebugConfig
     rendering: RenderingConfig
     ui: UIConfig
@@ -151,7 +165,19 @@ class ConfigLoader:
             seed=world_data.get('seed', WorldConfig.seed),
             chunk_size=world_data.get('chunk_size', WorldConfig.chunk_size),
             pipeline_layers=pipeline_layers,
-            layer_configs=layer_configs
+            layer_configs=layer_configs,
+            render_distance=world_data.get('render_distance', WorldConfig.render_distance),
+            chunk_cache_limit=world_data.get('chunk_cache_limit', WorldConfig.chunk_cache_limit),
+            chunk_unload_distance=world_data.get('chunk_unload_distance', WorldConfig.chunk_unload_distance)
+        )
+
+        # Camera config
+        camera_data = config_data.get('camera', {})
+        camera = CameraConfig(
+            initial_x=camera_data.get('initial_x', CameraConfig.initial_x),
+            initial_y=camera_data.get('initial_y', CameraConfig.initial_y),
+            move_speed=camera_data.get('move_speed', CameraConfig.move_speed),
+            fast_move_speed=camera_data.get('fast_move_speed', CameraConfig.fast_move_speed)
         )
         
         # Debug config
@@ -186,6 +212,7 @@ class ConfigLoader:
             application=application,
             window=window,
             world=world,
+            camera=camera,
             debug=debug,
             rendering=rendering,
             ui=ui
@@ -197,6 +224,7 @@ class ConfigLoader:
             application=ApplicationConfig(),
             window=WindowConfig(),
             world=WorldConfig(),
+            camera=CameraConfig(),
             debug=DebugConfig(),
             rendering=RenderingConfig(),
             ui=UIConfig()

@@ -55,10 +55,19 @@ class PipelineWorldGenerator:
         self._chunk_cache: Dict[Tuple[int, int], Dict[str, Any]] = {}
     
     def _world_to_chunk_coords(self, world_x: int, world_y: int) -> Tuple[int, int]:
-        """Convert world coordinates to chunk coordinates."""
+        """Convert world coordinates to chunk coordinates, accounting for subdivision."""
         import math
-        chunk_x = math.floor(world_x / self.chunk_size)
-        chunk_y = math.floor(world_y / self.chunk_size)
+
+        # Calculate the effective chunk size after all zoom layers
+        effective_chunk_size = self.chunk_size
+        zoom_count = sum(1 for layer_name in self.pipeline_layers if layer_name == "zoom")
+
+        # Each zoom layer subdivides by factor of 2, reducing effective chunk size
+        for _ in range(zoom_count):
+            effective_chunk_size //= 2
+
+        chunk_x = math.floor(world_x / effective_chunk_size)
+        chunk_y = math.floor(world_y / effective_chunk_size)
         return chunk_x, chunk_y
     
     def _ensure_chunk_loaded(self, chunk_x: int, chunk_y: int):
@@ -71,8 +80,18 @@ class PipelineWorldGenerator:
             region_size = 4  # Generate 4x4 chunks at a time
 
             # Calculate region bounds
-            region_min_x = (chunk_x // region_size) * region_size
-            region_min_y = (chunk_y // region_size) * region_size
+            # Note: region_size is in terms of BASE chunks, not subdivided chunks
+            # Convert subdivided chunk coordinates back to base chunk coordinates
+            zoom_count = sum(1 for layer_name in self.pipeline_layers if layer_name == "zoom")
+            zoom_factor = 2 ** zoom_count  # Each zoom layer subdivides by 2
+
+            # Convert subdivided chunk coordinates to base chunk coordinates
+            base_chunk_x = chunk_x // zoom_factor
+            base_chunk_y = chunk_y // zoom_factor
+
+            # Calculate region bounds in base chunk coordinates
+            region_min_x = (base_chunk_x // region_size) * region_size
+            region_min_y = (base_chunk_y // region_size) * region_size
             region_max_x = region_min_x + region_size - 1
             region_max_y = region_min_y + region_size - 1
 
@@ -81,10 +100,31 @@ class PipelineWorldGenerator:
             # Generate all chunks in this region
             data = self.pipeline.generate_chunks(bounds)
 
-            # Cache all generated chunks
+            # Cache all generated chunks, but prioritize subdivided chunks over base chunks
+            # First, add all chunks to cache
             for chunk_coord, chunk_data in data.chunks.items():
                 if chunk_coord not in self._chunk_cache:
                     self._chunk_cache[chunk_coord] = chunk_data
+
+            # Then, if we have zoom layers, ensure subdivided chunks take priority
+            if any(layer_name == "zoom" for layer_name in self.pipeline_layers):
+                # Find the highest subdivision level
+                max_subdivision_level = 0
+                for chunk_data in data.chunks.values():
+                    level = chunk_data.get('subdivision_level', 0)
+                    max_subdivision_level = max(max_subdivision_level, level)
+
+                # Remove any chunks that have a lower subdivision level than the maximum
+                # This ensures only the most subdivided chunks remain
+                if max_subdivision_level > 0:
+                    coords_to_remove = []
+                    for chunk_coord, chunk_data in self._chunk_cache.items():
+                        level = chunk_data.get('subdivision_level', 0)
+                        if level < max_subdivision_level:
+                            coords_to_remove.append(chunk_coord)
+
+                    for coord in coords_to_remove:
+                        del self._chunk_cache[coord]
     
     def get_tile(self, world_x: int, world_y: int) -> Tile:
         """Get a tile at the specified world coordinates."""

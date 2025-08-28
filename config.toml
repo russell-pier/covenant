@@ -13,14 +13,27 @@ center_y = 0
 radius = 50
 generator_type = "pipeline"  # Pipeline-based world generation
 seed = 12345  # Random seed for chunk generation
-chunk_size = 16  # Size of each chunk in tiles
+chunk_size = 32  # Size of each chunk in tiles for lands_and_seas layer
+
+# Infinite world settings
+render_distance = 2  # Buffer distance in chunks beyond screen edges (for smooth movement)
+chunk_cache_limit = 100  # Maximum number of chunks to keep in memory
+chunk_unload_distance = 5  # Unload chunks beyond this distance from screen viewport
 
 # World generation pipeline configuration
+# lands_and_seas: 32x32 → zoom: 16x16 (one zoom layer for cellular automata noise)
 pipeline_layers = [
     "lands_and_seas",
-    "zoom",
     "zoom"
 ]
+
+[camera]
+# Initial camera position (world coordinates)
+initial_x = 0
+initial_y = 0
+# Movement settings
+move_speed = 1  # Tiles per key press
+fast_move_speed = 5  # Tiles per key press when holding Shift
 
 # Layer-specific configurations
 [world.lands_and_seas]

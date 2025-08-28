@@ -21,6 +21,7 @@ class StatusDisplay:
         self.show_debug = self.config.debug.show_debug_on_startup
         self.show_coordinates = self.config.debug.show_coordinates_on_startup
         self.show_fps = self.config.debug.show_fps_on_startup
+        self.show_chunk_debug = False  # Chunk debug overlay (F3)
 
         # Colors from configuration
         self.info_color = self.config.ui.info_color
@@ -108,7 +109,8 @@ class StatusDisplay:
             content_x = start_x + 2  # 2 chars padding from left border
             console.print(content_x, content_start_y + i, display_line, fg=self.info_color, bg=container_bg)
 
-    def render_status_bar(self, console: tcod.console.Console, world_center_x: int, world_center_y: int):
+    def render_status_bar(self, console: tcod.console.Console, world_center_x: int, world_center_y: int,
+                         cursor_tile=None, chunk_info=None, world_stats=None):
         """Render the floating status bar with debug information (max 2 lines)."""
         if not self.show_debug:
             return
@@ -119,17 +121,41 @@ class StatusDisplay:
         # Prepare compact status content (max 2 lines)
         status_lines = []
 
-        # Line 1: Coordinates and screen size
+        # Line 1: Cursor position and tile information
         line1_parts = []
         if self.show_coordinates:
-            line1_parts.append(f"Center: ({world_center_x}, {world_center_y})")
+            line1_parts.append(f"Cursor: ({world_center_x}, {world_center_y})")
+
+        if cursor_tile:
+            # Safety check for tile_type
+            tile_type = getattr(cursor_tile, 'tile_type', 'unknown')
+            if isinstance(tile_type, str):
+                line1_parts.append(f"Tile: {tile_type.title()}")
+            else:
+                line1_parts.append(f"Tile: {str(tile_type)}")
+
+        if chunk_info:
+            chunk_x = chunk_info.get('chunk_x', '?')
+            chunk_y = chunk_info.get('chunk_y', '?')
+            line1_parts.append(f"Chunk: ({chunk_x}, {chunk_y})")
+
         line1_parts.append(f"Screen: {screen_width}x{screen_height}")
         status_lines.append(" | ".join(line1_parts))
 
-        # Line 2: Frame count and FPS
+        # Line 2: World statistics and performance
         line2_parts = [f"Frame: {self.frame_count}"]
+
+        if world_stats:
+            # Handle both old and new chunk systems
+            loaded_chunks = world_stats.get('loaded_render_chunks', world_stats.get('loaded_chunks', 0))
+            line2_parts.append(f"Chunks: {loaded_chunks}")
+
+            cache_hit_ratio = world_stats.get('cache_hit_ratio', 0)
+            line2_parts.append(f"Cache: {cache_hit_ratio:.1%}")
+
         if self.show_fps:
             line2_parts.append(f"FPS: {self.fps:.1f}")
+
         status_lines.append(" | ".join(line2_parts))
 
         # Render as floating container (max lines from config)
@@ -150,8 +176,8 @@ class StatusDisplay:
         
         # Compact help text (max 3 lines)
         help_lines = [
-            "Ctrl+Q/ESC: Quit | R: Regenerate world",
-            "F1: Toggle debug info | F2: Toggle coordinates",
+            "WASD/Arrows: Move camera | Shift: Fast move | R: Regenerate",
+            "F1: Debug | F2: Coords | F3: Chunks | F4: FPS | Ctrl+Q/ESC: Quit",
             "Hot reload: Save any .py file to restart"
         ]
 
@@ -226,6 +252,119 @@ class StatusDisplay:
     def toggle_fps(self):
         """Toggle FPS display."""
         self.show_fps = not self.show_fps
+
+    def toggle_chunk_debug(self):
+        """Toggle chunk debug overlay."""
+        self.show_chunk_debug = not self.show_chunk_debug
+
+    def render_chunk_debug_overlay(self, console: tcod.console.Console, world_manager,
+                                  view_center_x: int, view_center_y: int):
+        """
+        Render chunk boundaries and debug information as an overlay.
+
+        Args:
+            console: The tcod console to render to
+            world_manager: World manager for chunk information
+            view_center_x: X coordinate of the view center
+            view_center_y: Y coordinate of the view center
+        """
+        if not self.show_chunk_debug:
+            return
+
+        screen_width = console.width
+        screen_height = console.height
+        half_width = screen_width // 2
+        half_height = screen_height // 2
+
+        # Handle both old and new world managers
+        if hasattr(world_manager, 'render_chunk_size'):
+            chunk_size = world_manager.render_chunk_size  # New dual chunk system
+        elif hasattr(world_manager, 'chunk_size'):
+            chunk_size = world_manager.chunk_size  # Old system
+        else:
+            chunk_size = 64  # Default fallback
+
+        # Calculate visible world bounds
+        min_world_x = view_center_x - half_width
+        max_world_x = view_center_x + half_width
+        min_world_y = view_center_y - half_height
+        max_world_y = view_center_y + half_height
+
+        # Find chunk boundaries that intersect with the visible area
+        min_chunk_x = min_world_x // chunk_size
+        max_chunk_x = max_world_x // chunk_size
+        min_chunk_y = min_world_y // chunk_size
+        max_chunk_y = max_world_y // chunk_size
+
+        # Draw vertical chunk boundaries (optimized - only draw every 4th line)
+        for chunk_x in range(min_chunk_x, max_chunk_x + 2):
+            world_x = chunk_x * chunk_size
+            screen_x = (world_x - view_center_x) + half_width
+
+            if 0 <= screen_x < screen_width:
+                # Check if any chunk in this column is loaded (sample middle)
+                sample_world_y = view_center_y
+
+                # Handle both old and new world managers
+                if hasattr(world_manager, 'world_to_render_chunk_coords'):
+                    chunk_coords = world_manager.world_to_render_chunk_coords(world_x, sample_world_y)
+                else:
+                    chunk_coords = world_manager.world_to_chunk_coords(world_x, sample_world_y)
+
+                is_loaded = world_manager.is_chunk_loaded(*chunk_coords)
+
+                # Use different colors for loaded vs unloaded chunks
+                if is_loaded:
+                    color = (0, 255, 0)  # Green for loaded chunks
+                else:
+                    color = (255, 0, 0)  # Red for unloaded chunks
+
+                # Only draw every 4th line for performance
+                for screen_y in range(0, screen_height, 4):
+                    console.print(screen_x, screen_y, "│", fg=color, bg=(0, 0, 0))
+
+        # Draw horizontal chunk boundaries (optimized - only draw every 4th line)
+        for chunk_y in range(min_chunk_y, max_chunk_y + 2):
+            world_y = chunk_y * chunk_size
+            screen_y = (world_y - view_center_y) + half_height
+
+            if 0 <= screen_y < screen_height:
+                # Check if any chunk in this row is loaded (sample middle)
+                sample_world_x = view_center_x
+
+                # Handle both old and new world managers
+                if hasattr(world_manager, 'world_to_render_chunk_coords'):
+                    chunk_coords = world_manager.world_to_render_chunk_coords(sample_world_x, world_y)
+                else:
+                    chunk_coords = world_manager.world_to_chunk_coords(sample_world_x, world_y)
+
+                is_loaded = world_manager.is_chunk_loaded(*chunk_coords)
+
+                # Use different colors for loaded vs unloaded chunks
+                if is_loaded:
+                    color = (0, 255, 0)  # Green for loaded chunks
+                else:
+                    color = (255, 0, 0)  # Red for unloaded chunks
+
+                # Only draw every 4th line for performance
+                for screen_x in range(0, screen_width, 4):
+                    console.print(screen_x, screen_y, "─", fg=color, bg=(0, 0, 0))
+
+        # Draw chunk coordinates at chunk corners
+        for chunk_x in range(min_chunk_x, max_chunk_x + 1):
+            for chunk_y in range(min_chunk_y, max_chunk_y + 1):
+                world_x = chunk_x * chunk_size
+                world_y = chunk_y * chunk_size
+                screen_x = (world_x - view_center_x) + half_width
+                screen_y = (world_y - view_center_y) + half_height
+
+                if 0 <= screen_x < screen_width - 10 and 0 <= screen_y < screen_height:
+                    is_loaded = world_manager.is_chunk_loaded(chunk_x, chunk_y)
+                    color = (0, 255, 0) if is_loaded else (255, 0, 0)
+
+                    # Show chunk coordinates
+                    coord_text = f"({chunk_x},{chunk_y})"
+                    console.print(screen_x + 1, screen_y, coord_text, fg=color, bg=(0, 0, 0))
 
 
 # Example usage and testing

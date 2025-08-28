@@ -143,42 +143,53 @@ class ZoomLayer(GenerationLayer):
     
     def _subdivide_chunk(self, seed: int, parent_chunk: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Subdivide a parent chunk into smaller sub-chunks.
-        
+        Subdivide a parent chunk into smaller sub-chunks with dynamic sizing.
+
+        This method is agnostic about absolute chunk sizes and dynamically
+        calculates the new chunk size based on the subdivision factor.
+        This allows for flexible chaining of multiple zoom layers.
+
         Args:
             seed: World generation seed
             parent_chunk: The chunk to subdivide
-            
+
         Returns:
-            List of sub-chunk dictionaries
+            List of sub-chunk dictionaries with dynamically calculated sizes
         """
         parent_x = parent_chunk['chunk_x']
         parent_y = parent_chunk['chunk_y']
         parent_size = parent_chunk['chunk_size']
         parent_land_type = parent_chunk.get('land_type', 'water')
-        
+
         sub_chunks = []
+        # Dynamic chunk size calculation - halve the parent size
+        # This works regardless of the input chunk size (32→16, 16→8, 8→4, etc.)
         sub_chunk_size = parent_size // self.subdivision_factor
-        
+
+        # Ensure minimum chunk size of 1 tile
+        if sub_chunk_size < 1:
+            sub_chunk_size = 1
+
         for sub_x in range(self.subdivision_factor):
             for sub_y in range(self.subdivision_factor):
-                # Calculate new chunk coordinates
+                # Calculate new chunk coordinates in the subdivided space
                 new_chunk_x = parent_x * self.subdivision_factor + sub_x
                 new_chunk_y = parent_y * self.subdivision_factor + sub_y
-                
-                # Create sub-chunk inheriting parent's land type
+
+                # Create sub-chunk with dynamically calculated size
                 sub_chunk = {
                     'chunk_x': new_chunk_x,
                     'chunk_y': new_chunk_y,
-                    'chunk_size': sub_chunk_size,
+                    'chunk_size': sub_chunk_size,  # Dynamic size based on parent
                     'land_type': parent_land_type,
                     'parent_chunk_x': parent_x,
                     'parent_chunk_y': parent_y,
-                    'subdivision_level': parent_chunk.get('subdivision_level', 0) + 1
+                    'subdivision_level': parent_chunk.get('subdivision_level', 0) + 1,
+                    'original_chunk_size': parent_chunk.get('original_chunk_size', parent_size)
                 }
-                
+
                 sub_chunks.append(sub_chunk)
-        
+
         return sub_chunks
 
     def _apply_cellular_automata(self, seed: int, chunks: Dict[Tuple[int, int], Dict[str, Any]],
