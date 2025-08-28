@@ -1,0 +1,38 @@
+# Configuration for 2D Minecraft-like World Generator
+# Main application settings
+
+[application]
+title = "2D Minecraft World - Spiral Generation"
+version = "0.1.0"
+
+[window]
+initial_width = 80
+initial_height = 50
+vsync = true
+
+[world]
+center_x = 0
+center_y = 0
+radius = 50
+
+[debug]
+show_debug_on_startup = true
+show_coordinates_on_startup = true
+show_fps_on_startup = false
+
+[rendering]
+seamless_blocks_enabled = true
+clear_color = [0, 0, 0]  # Black background
+
+[ui]
+# UI panel colors
+panel_background = [32, 32, 48]  # Dark blue-gray
+border_color = [128, 128, 160]   # Light blue-gray
+info_color = [255, 255, 255]     # White
+warning_color = [255, 255, 0]    # Yellow
+debug_color = [128, 255, 128]    # Light green
+
+# Panel layout
+top_panel_max_lines = 2
+bottom_panel_max_lines = 3
+panel_margin = 2  # Characters from screen edge
