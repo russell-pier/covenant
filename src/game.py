@@ -3,7 +3,7 @@
 Game logic for 2D Minecraft-like World
 
 Contains the core game state, rendering, and input handling logic.
-Renders a tile-based world with spiral generation.
+Renders a tile-based world with pipeline generation.
 """
 
 import tcod

@@ -7,7 +7,7 @@ highly configurable and extensible world generation.
 """
 
 from typing import Dict, Tuple, Any, List
-from ..generators.spiral import Tile
+from .world_generator import Tile
 from ..generation.pipeline import WorldGenerationPipeline
 from ..generation.world import WorldTier
 
@@ -165,19 +165,4 @@ class PipelineWorldGenerator:
             'layer_configs': self.layer_configs
         }
     
-    def generate_spiral(self, center_x: int, center_y: int, radius: int) -> Dict[Tuple[int, int], Tile]:
-        """
-        Generate tiles in a spiral pattern (for compatibility with existing code).
-        
-        This method provides compatibility with the old spiral generator interface
-        while using the new pipeline system internally.
-        """
-        tiles = {}
-        
-        # Generate tiles in a square area (simpler than actual spiral)
-        for x in range(center_x - radius, center_x + radius + 1):
-            for y in range(center_y - radius, center_y + radius + 1):
-                tile = self.get_tile(x, y)
-                tiles[(x, y)] = tile
-        
-        return tiles
+

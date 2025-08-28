@@ -4,7 +4,7 @@ World generators for the 2D Minecraft-like game.
 Contains various world generation algorithms and patterns.
 """
 
-from .spiral import SpiralGenerator, WorldGenerator
+from .world_generator import WorldGenerator, Tile
 from .pipeline_generator import PipelineWorldGenerator
 
-__all__ = ["SpiralGenerator", "WorldGenerator", "PipelineWorldGenerator"]
+__all__ = ["WorldGenerator", "Tile", "PipelineWorldGenerator"]

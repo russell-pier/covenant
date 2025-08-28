@@ -11,7 +11,7 @@ vsync = true
 center_x = 0
 center_y = 0
 radius = 50
-generator_type = "pipeline"  # "spiral" or "pipeline"
+generator_type = "pipeline"  # Pipeline-based world generation
 seed = 12345  # Random seed for chunk generation
 chunk_size = 16  # Size of each chunk in tiles
 

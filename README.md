@@ -4,7 +4,7 @@ A tile-based 2D world generation and rendering system using python-tcod with hot
 
 ## Features
 
-- **Spiral World Generation**: Counter-clockwise spiral tile generation pattern
+- **Pipeline World Generation**: Layered, configurable terrain generation system
 - **TOML-Based Tile Configuration**: Define tile types, colors, and characters in `tiles.toml`
 - **Seamless Block Rendering**: Block characters (█, ▓, ▒, ░) render without gaps for connected appearance
 - **Floating UI Panels**: Bordered status and control panels that float over the world with proper margins
@@ -21,7 +21,8 @@ covenant/
 ├── src/                    # Source code
 │   ├── generators/         # World generation algorithms
 │   │   ├── __init__.py
-│   │   └── spiral.py      # Spiral pattern generator
+│   │   └── world_generator.py  # Main world generator
+│   │   └── pipeline_generator.py  # Pipeline-based generator
 │   ├── ui/                # User interface components
 │   │   ├── __init__.py
 │   │   └── status_display.py  # Status bar and UI widgets
@@ -170,7 +171,7 @@ Due to the nature of terminal/console rendering, there are some limitations:
 
 - **Ctrl+Q**: Exit gracefully
 - **ESC**: Exit gracefully
-- **R**: Regenerate world with new spiral pattern
+- **R**: Regenerate world with new pipeline generation
 - **F1**: Toggle debug information display
 - **F2**: Toggle coordinate display
 - **Window Close Button**: Exit gracefully
@@ -210,7 +211,7 @@ The codebase is organized into distinct, modular components:
   - `WorldRenderer` - Handles tile and terrain rendering
   - `EffectRenderer` - Manages visual effects and animations
   - `GameRenderer` - Coordinates all rendering subsystems
-- **`src/generators/`** - World generation algorithms (spiral pattern)
+- **`src/generators/`** - World generation algorithms (pipeline system)
 - **`src/ui/`** - User interface components (status display, widgets)
 
 ### Key Features

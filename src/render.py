@@ -8,7 +8,7 @@ Separated from game logic for better organization and modularity.
 
 import tcod
 from typing import Dict, Tuple, Optional, List
-from .generators.spiral import Tile
+from .generators.world_generator import Tile
 from .ui.status_display import StatusDisplay
 from .tiles import get_tile_registry
 
