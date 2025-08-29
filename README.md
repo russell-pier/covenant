@@ -19,10 +19,11 @@ A tile-based 2D world generation and rendering system using python-tcod with hot
 ```
 covenant/
 ├── src/                    # Source code
-│   ├── generators/         # World generation algorithms
+│   ├── generation/         # World generation pipeline system
 │   │   ├── __init__.py
-│   │   └── world_generator.py  # Main world generator
-│   │   └── pipeline_generator.py  # Pipeline-based generator
+│   │   ├── world_generator.py  # Main world generator interface
+│   │   ├── pipeline.py     # Generation pipeline core
+│   │   └── world/          # World tier layers
 │   ├── ui/                # User interface components
 │   │   ├── __init__.py
 │   │   └── status_display.py  # Status bar and UI widgets

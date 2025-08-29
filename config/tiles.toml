@@ -1,0 +1,74 @@
+# Tile Configuration for Covenant - 2D World Generator
+# Each tile type defines its visual appearance
+
+[stone]
+name = "Stone"
+character = "█"
+font_color = [200, 200, 200]  # Light gray
+background_color = [64, 64, 64]  # Dark gray
+
+[dirt]
+name = "Dirt"
+character = "▓"
+font_color = [139, 69, 19]  # Saddle brown
+background_color = [101, 67, 33]  # Dark brown
+
+[grass]
+name = "Grass"
+character = "▒"
+font_color = [34, 139, 34]  # Forest green
+background_color = [0, 100, 0]  # Dark green
+
+[water]
+name = "Water"
+character = "~"
+font_color = [173, 216, 230]  # Light blue
+background_color = [0, 0, 139]  # Dark blue
+
+[sand]
+name = "Sand"
+character = "░"
+font_color = [255, 218, 185]  # Peach puff
+background_color = [238, 203, 173]  # Bisque
+
+[wood]
+name = "Wood"
+character = "║"
+font_color = [160, 82, 45]  # Saddle brown
+background_color = [139, 69, 19]  # Dark brown
+
+[leaves]
+name = "Leaves"
+character = "♠"
+font_color = [50, 205, 50]  # Lime green
+background_color = [34, 139, 34]  # Forest green
+
+[coal]
+name = "Coal"
+character = "●"
+font_color = [64, 64, 64]  # Dark gray
+background_color = [0, 0, 0]  # Black
+
+[iron]
+name = "Iron"
+character = "◆"
+font_color = [192, 192, 192]  # Silver
+background_color = [105, 105, 105]  # Dim gray
+
+[gold]
+name = "Gold"
+character = "◇"
+font_color = [255, 215, 0]  # Gold
+background_color = [184, 134, 11]  # Dark goldenrod
+
+[void]
+name = "Void"
+character = " "
+font_color = [0, 0, 0]  # Black
+background_color = [0, 0, 0]  # Black
+
+[center_marker]
+name = "Center Marker"
+character = "+"
+font_color = [255, 0, 0]  # Red
+background_color = [0, 0, 0]  # Black

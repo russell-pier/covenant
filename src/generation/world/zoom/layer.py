@@ -73,7 +73,11 @@ class ZoomLayer(GenerationLayer):
             raise ValueError(f"erosion_probability must be 0.0-1.0, got {self.erosion_probability}")
         if not (0.0 <= self.noise_probability <= 1.0):
             raise ValueError(f"noise_probability must be 0.0-1.0, got {self.noise_probability}")
-    
+
+    def _get_config_value(self, key: str, default: Any) -> Any:
+        """Get a configuration value with a default fallback."""
+        return self.config.get(key, default)
+
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from the layer's TOML file."""
         config_path = os.path.join(os.path.dirname(__file__), 'config.toml')

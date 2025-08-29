@@ -1,0 +1,28 @@
+# World Generation Configuration
+
+[world]
+# World generation settings
+seed = 12345
+chunk_size = 32
+render_chunk_size = 64
+generation_cache_limit = 200
+
+# Generation pipeline layers
+pipeline_layers = ["lands_and_seas", "zoom"]
+
+# Async world management
+render_distance = 3
+chunk_cache_limit = 100
+chunk_unload_distance = 5
+
+[layers.lands_and_seas]
+# Basic land/water distribution
+land_ratio = 4
+algorithm = "random_chunks"
+
+[layers.zoom]
+# Terrain refinement through cellular automata
+subdivision_factor = 2
+land_expansion_threshold = 3
+erosion_probability = 0.25
+iterations = 6

@@ -6,7 +6,7 @@ Simple entry point that imports and runs the game.
 Separated from game logic for better organization.
 """
 
-from src.game import run_game
+from src.engine import run_game
 
 
 if __name__ == "__main__":

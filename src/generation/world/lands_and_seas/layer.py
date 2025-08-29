@@ -43,7 +43,11 @@ class LandsAndSeasLayer(GenerationLayer):
         
         if self.algorithm not in ['random_chunks']:
             raise ValueError(f"Unsupported algorithm: {self.algorithm}")
-    
+
+    def _get_config_value(self, key: str, default: Any) -> Any:
+        """Get a configuration value with a default fallback."""
+        return self.config.get(key, default)
+
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from the layer's TOML file."""
         config_path = os.path.join(os.path.dirname(__file__), 'config.toml')
