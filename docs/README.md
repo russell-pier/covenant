@@ -43,7 +43,7 @@ iterations = 2
 ### Running the Pipeline
 
 ```python
-from src.generation import WorldGenerator
+from src.generators import WorldGenerator
 
 generator = WorldGenerator(
     generator_type="pipeline",
@@ -110,7 +110,7 @@ python src/generation/world/zoom/test_layer.py
 python demo_layers.py
 
 # Test integration
-python -c "from src.generation import WorldGenerator; ..."
+python -c "from src.generators import WorldGenerator; ..."
 ```
 
 ### Configuration Guidelines

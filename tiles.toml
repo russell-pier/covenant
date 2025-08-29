@@ -1,0 +1,26 @@
+# Tile Configuration for 2D Minecraft-like World
+# Defines visual properties for all tile types in the game
+
+[stone]
+name = "Stone"
+character = "█"
+font_color = [128, 128, 128]  # Gray (not used in seamless mode)
+background_color = [128, 128, 128]  # Gray - this fills the entire cell seamlessly
+
+[water]
+name = "Water"
+character = "█"
+font_color = [64, 128, 255]  # Blue (not used in seamless mode)
+background_color = [64, 128, 255]  # Blue - this fills the entire cell seamlessly
+
+[cursor]
+name = "Cursor"
+character = "+"
+font_color = [255, 255, 0]  # Bright yellow
+background_color = [0, 0, 0]  # Transparent black background
+
+[loading]
+name = "Loading"
+character = "?"
+font_color = [128, 128, 128]  # Gray
+background_color = [64, 64, 64]  # Dark gray background
