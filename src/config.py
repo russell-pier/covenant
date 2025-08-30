@@ -9,10 +9,7 @@ import os
 from typing import Dict, Any, Tuple
 from dataclasses import dataclass
 
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    import tomli as tomllib  # Fallback for older Python versions
+import tomllib  # Python 3.11+ built-in module
 
 
 @dataclass

@@ -72,17 +72,11 @@ class WorldGenerationWorker:
         self.running = False
         self.thread: Optional[threading.Thread] = None
         
-        # Dual chunk system
-        self.render_chunk_size = 64  # Fixed render chunk size
-        self.dual_chunk_manager = DualChunkManager(render_chunk_size=self.render_chunk_size)
+        # Fixed chunk system - all chunks are the same size
+        self.chunk_size = world_config.chunk_size
 
-        # Calculate final generation chunk size
-        self.final_generation_chunk_size = self.dual_chunk_manager.calculate_final_generation_chunk_size(
-            world_config.chunk_size, world_config.pipeline_layers
-        )
-
-        # Chunk management - now caches render chunks
-        self.render_chunk_cache: OrderedDict[Tuple[int, int], RenderChunk] = OrderedDict()
+        # Chunk management - caches generated chunks
+        self.chunk_cache: OrderedDict[Tuple[int, int], Dict] = OrderedDict()
         self.cache_limit = world_config.chunk_cache_limit
         
         # Request tracking
@@ -181,10 +175,10 @@ class WorldGenerationWorker:
             self.requests_cancelled += 1
             return
 
-        # Check if render chunk is already cached
-        render_chunk_key = (chunk_x, chunk_y)
-        if render_chunk_key in self.render_chunk_cache:
-            # Send cached render chunk response immediately
+        # Check if chunk is already cached
+        chunk_key = (chunk_x, chunk_y)
+        if chunk_key in self.chunk_cache:
+            # Send cached chunk response immediately
             response = Message.chunk_response(
                 chunk_x, chunk_y,
                 {"status": "ready"},  # Minimal response data
@@ -195,17 +189,17 @@ class WorldGenerationWorker:
             self.message_bus.send_to_main(response, block=False)
             return
 
-        # Generate render chunk by aggregating generation chunks
+        # Generate chunk using new fixed chunk system
         self.active_requests.add(request_id)
         start_time = time.time()
 
         try:
-            # Generate render chunk using dual chunk system
-            render_chunk = self._generate_render_chunk(chunk_x, chunk_y)
+            # Generate chunk using pipeline system
+            chunk_data = self._generate_chunk(chunk_x, chunk_y)
             generation_time = time.time() - start_time
 
-            # Cache the render chunk
-            self.render_chunk_cache[render_chunk_key] = render_chunk
+            # Cache the chunk
+            self.chunk_cache[chunk_key] = chunk_data
             self._enforce_cache_limit()
 
             # Send success response immediately
@@ -246,37 +240,7 @@ class WorldGenerationWorker:
         
         self.requests_cancelled += 1
     
-    def _generate_render_chunk(self, render_chunk_x: int, render_chunk_y: int) -> RenderChunk:
-        """
-        Generate a render chunk by aggregating multiple generation chunks.
-
-        Args:
-            render_chunk_x: Render chunk X coordinate
-            render_chunk_y: Render chunk Y coordinate
-
-        Returns:
-            Complete render chunk with aggregated generation data
-        """
-        # Get all generation chunks that overlap with this render chunk
-        generation_chunk_coords = self.dual_chunk_manager.get_generation_chunks_for_render_chunk(
-            render_chunk_x, render_chunk_y, self.final_generation_chunk_size
-        )
-
-        # Generate all required generation chunks
-        generation_chunks = []
-
-        for gen_chunk_x, gen_chunk_y in generation_chunk_coords:
-            gen_chunk = self._generate_generation_chunk(gen_chunk_x, gen_chunk_y)
-            generation_chunks.append(gen_chunk)
-
-        # Aggregate generation chunks into render chunk
-        render_chunk = self.dual_chunk_manager.aggregate_generation_chunks(
-            generation_chunks, render_chunk_x, render_chunk_y
-        )
-
-        return render_chunk
-
-    def _generate_generation_chunk(self, chunk_x: int, chunk_y: int) -> GenerationChunk:
+    def _generate_chunk(self, chunk_x: int, chunk_y: int) -> Dict:
         """
         Generate a single chunk using the TierManager pipeline system.
 
@@ -285,24 +249,37 @@ class WorldGenerationWorker:
             chunk_y: Chunk Y coordinate
 
         Returns:
-            GenerationChunk containing chunk data and tile information
+            Dictionary containing chunk data and tile information
         """
-        # Calculate effective chunk size after zoom layers
-        effective_chunk_size = self.chunk_size
-        zoom_count = sum(1 for layer_name in self.world_config.pipeline_layers if layer_name == "zoom")
-        for _ in range(zoom_count):
-            effective_chunk_size //= 2
+        return self._generate_chunk_data(chunk_x, chunk_y)
+
+    def _generate_chunk_data(self, chunk_x: int, chunk_y: int) -> Dict:
+        """
+        Generate a single chunk using the TierManager pipeline system.
+
+        Args:
+            chunk_x: Chunk X coordinate
+            chunk_y: Chunk Y coordinate
+
+        Returns:
+            Dictionary containing chunk data and tile information
+        """
+        # Fixed chunk size - no more dynamic sizing
+        chunk_size = self.chunk_size
 
         # Calculate world bounds for this chunk
-        min_world_x = chunk_x * effective_chunk_size
-        min_world_y = chunk_y * effective_chunk_size
-        max_world_x = min_world_x + effective_chunk_size - 1
-        max_world_y = min_world_y + effective_chunk_size - 1
+        min_world_x = chunk_x * chunk_size
+        min_world_y = chunk_y * chunk_size
+        max_world_x = min_world_x + chunk_size - 1
+        max_world_y = min_world_y + chunk_size - 1
 
         # Create generation data for the pipeline
         generation_data = GenerationData(
             seed=self.seed,
-            chunk_size=effective_chunk_size,
+            chunk_size=chunk_size,
+            continental_samples={},
+            regional_samples={},
+            local_samples={},
             chunks={},
             processed_layers=[],
             custom_data={}
@@ -315,30 +292,27 @@ class WorldGenerationWorker:
         processed_data = self.tier_manager.process_tiers(generation_data, bounds)
 
         # Extract tiles from processed data
-        chunk_tiles = {}
-
-        # Get chunk data from the processed pipeline
-        chunk_data = processed_data.get_chunk(chunk_x, chunk_y)
-
-        # Verify pipeline provided required data
-        if 'land_type' not in chunk_data:
-            raise RuntimeError(f"❌ Pipeline failed to provide 'land_type' for chunk ({chunk_x}, {chunk_y}). "
-                             f"Available data: {list(chunk_data.keys())}. "
+        chunk_key = (chunk_x, chunk_y)
+        if chunk_key not in processed_data.chunks:
+            raise RuntimeError(f"❌ Pipeline failed to generate chunk ({chunk_x}, {chunk_y}). "
+                             f"Available chunks: {list(processed_data.chunks.keys())}. "
                              f"TierManager configured: {self.tier_manager.is_configured()}")
 
-        # Use the land_type from the pipeline to generate tiles
-        chunk_land_type = chunk_data['land_type']
+        chunk_data = processed_data.chunks[chunk_key]
 
-        for world_y in range(min_world_y, max_world_y + 1):
-            for world_x in range(min_world_x, max_world_x + 1):
-                # Use the chunk's land_type as the base tile type
-                tile_type = chunk_land_type
+        # Verify pipeline provided tiles
+        if 'tiles' not in chunk_data:
+            raise RuntimeError(f"❌ Pipeline failed to provide 'tiles' for chunk ({chunk_x}, {chunk_y}). "
+                             f"Available data: {list(chunk_data.keys())}")
 
-                chunk_tiles[(world_x, world_y)] = {
-                    'tile_type': tile_type,
-                    'x': world_x,
-                    'y': world_y
-                }
+        # Get tiles from the pipeline
+        chunk_tiles = {}
+        for (world_x, world_y), tile_type in chunk_data['tiles'].items():
+            chunk_tiles[(world_x, world_y)] = {
+                'tile_type': tile_type,
+                'x': world_x,
+                'y': world_y
+            }
 
         # Calculate chunk statistics for debugging
         tile_types = [tile_data['tile_type'] for tile_data in chunk_tiles.values()]
@@ -346,29 +320,29 @@ class WorldGenerationWorker:
         for tile_type in tile_types:
             tile_type_counts[tile_type] = tile_type_counts.get(tile_type, 0) + 1
 
-        # Create GenerationChunk object
-        metadata = {
-            'world_bounds': (min_world_x, min_world_y, max_world_x, max_world_y),
-            'tile_type_counts': tile_type_counts,
-            'total_tiles': len(chunk_tiles),
-            'generated_at': time.time(),
-            'pipeline_layers': self.world_config.pipeline_layers.copy()
+        # Create chunk data dictionary
+        chunk_result = {
+            'chunk_x': chunk_x,
+            'chunk_y': chunk_y,
+            'chunk_size': chunk_size,
+            'tiles': chunk_tiles,
+            'metadata': {
+                'world_bounds': (min_world_x, min_world_y, max_world_x, max_world_y),
+                'tile_type_counts': tile_type_counts,
+                'total_tiles': len(chunk_tiles),
+                'generated_at': time.time(),
+                'pipeline_layers': self.world_config.pipeline_layers.copy()
+            }
         }
 
-        return GenerationChunk(
-            chunk_x=chunk_x,
-            chunk_y=chunk_y,
-            chunk_size=effective_chunk_size,
-            tiles=chunk_tiles,
-            metadata=metadata
-        )
+        return chunk_result
     
     def _enforce_cache_limit(self):
         """Enforce cache size limit using LRU eviction."""
-        while len(self.render_chunk_cache) > self.cache_limit:
-            # Remove oldest render chunk (first in OrderedDict)
-            oldest_chunk = next(iter(self.render_chunk_cache))
-            del self.render_chunk_cache[oldest_chunk]
+        while len(self.chunk_cache) > self.cache_limit:
+            # Remove oldest chunk (first in OrderedDict)
+            oldest_chunk = next(iter(self.chunk_cache))
+            del self.chunk_cache[oldest_chunk]
     
     def _send_status_update(self):
         """Send status update to main thread."""
