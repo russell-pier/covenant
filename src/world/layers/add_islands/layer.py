@@ -27,18 +27,14 @@ class IslandsLayer(GenerationLayer):
     water gaps within landmasses for more natural terrain.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__("islands", config)
-        
-        # Load configuration from TOML file if no config provided
-        if not config:
-            self.config = self._load_config()
-        
-        # Extract configuration values
-        self.conversion_probability = self._get_config_value('conversion_probability', 0.8)
-        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood', True)
-        self.min_land_neighbors = self._get_config_value('min_land_neighbors', 8)
-        self.require_all_neighbors = self._get_config_value('require_all_neighbors', True)
+
+        # Extract configuration values - all required
+        self.conversion_probability = self._get_config_value('conversion_probability')
+        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood')
+        self.min_land_neighbors = self._get_config_value('min_land_neighbors')
+        self.require_all_neighbors = self._get_config_value('require_all_neighbors')
         
         # Validate configuration
         if not (0.0 <= self.conversion_probability <= 1.0):
@@ -52,20 +48,7 @@ class IslandsLayer(GenerationLayer):
         if self.min_land_neighbors > max_neighbors:
             raise ValueError(f"min_land_neighbors ({self.min_land_neighbors}) cannot be greater than maximum possible neighbors ({max_neighbors})")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from the layer's TOML file."""
-        # Look for config in the centralized config directory
-        config_path = os.path.join('config', 'world', 'layers', 'islands.toml')
 
-        if not os.path.exists(config_path):
-            return {}
-
-        try:
-            with open(config_path, 'rb') as f:
-                data = tomllib.load(f)
-            return data.get('islands', {})
-        except Exception as e:
-            return {}
     
     def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
         """
@@ -131,7 +114,7 @@ class IslandsLayer(GenerationLayer):
                     continue
                 
                 # Only consider water chunks
-                current_land_type = data.get_chunk_property(chunk_x, chunk_y, 'land_type', 'water')
+                current_land_type = data.get_chunk_property(chunk_x, chunk_y, 'land_type')
                 if current_land_type != 'water':
                     continue
                 
@@ -188,7 +171,7 @@ class IslandsLayer(GenerationLayer):
             
             # Check if neighbor chunk exists and is land
             if neighbor_key in data.chunks:
-                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type', 'water')
+                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type')
                 if neighbor_land_type == 'land':
                     land_neighbors += 1
             # If neighbor doesn't exist, treat as water (not land)
@@ -243,7 +226,7 @@ class IslandsLayer(GenerationLayer):
             neighbor_key = (neighbor_x, neighbor_y)
             
             if neighbor_key in data.chunks:
-                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type', 'water')
+                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type')
                 if neighbor_land_type == 'land':
                     land_neighbors += 1
         

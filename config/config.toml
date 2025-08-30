@@ -24,8 +24,11 @@ chunk_unload_distance = 5  # Unload chunks beyond this distance from screen view
 # lands_and_seas: 64x64 → zoom: 32x32 → islands: convert isolated water to land
 pipeline_layers = [
     "lands_and_seas",
+    "zoom", 
+    "islands",
     "zoom",
     "islands",
+    "zoom",
     "zoom"
 ]
 
@@ -48,10 +51,23 @@ land_expansion_threshold = 6  # Much higher threshold - land needs many neighbor
 erosion_probability = 0.1
 iterations = 2  # Fewer iterations to prevent runaway growth
 use_multi_pass = false  # Disable multi-pass for simpler, controlled expansion
+pass_1_iterations = 3
+pass_1_expansion_threshold = 2
+pass_1_erosion_probability = 0.1
+pass_2_iterations = 3
+pass_2_expansion_threshold = 4
+pass_2_erosion_probability = 0.3
+protect_interior = false
+interior_threshold = 8
+use_moore_neighborhood = true
+preserve_islands = true
+min_island_size = 1
 fractal_perturbation = false  # Disable for cleaner testing
+perturbation_strength = 0.3
 edge_noise_boost = false
 add_noise = false
 noise_probability = 0.0
+edge_noise_probability = 0.25
 
 [world.islands]
 # Convert 80% of eligible isolated water chunks to islands

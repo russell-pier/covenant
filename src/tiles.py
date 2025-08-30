@@ -46,22 +46,15 @@ class TileConfig:
 class TileRegistry:
     """Registry for all tile configurations."""
 
-    def __init__(self, config_file: str = None):
+    def __init__(self, config_file: str):
         self.tiles: Dict[str, TileConfig] = {}
-        # Default to centralized config location
-        self.config_file = config_file or os.path.join("config", "tiles.toml")
-        self.default_tile = TileConfig(
-            name="Unknown",
-            character="?",
-            font_color=(255, 0, 255),  # Magenta to make missing tiles obvious
-            background_color=(128, 0, 128)
-        )
+        self.config_file = config_file
         self.load_tiles()
     
     def load_tiles(self):
-        """Load tile configurations from the TOML file."""
+        """Load tile configurations from the TOML file - fails if missing or invalid."""
         if not os.path.exists(self.config_file):
-            return
+            raise FileNotFoundError(f"❌ Tile configuration file not found: {self.config_file}")
 
         try:
             with open(self.config_file, 'rb') as f:
@@ -70,19 +63,26 @@ class TileRegistry:
             self.tiles.clear()
 
             for tile_id, tile_data in config_data.items():
-                try:
-                    tile_config = TileConfig(
-                        name=tile_data.get('name', tile_id.title()),
-                        character=tile_data.get('character', '?'),
-                        font_color=tile_data.get('font_color', [255, 255, 255]),
-                        background_color=tile_data.get('background_color', [0, 0, 0])
-                    )
-                    self.tiles[tile_id] = tile_config
-                except (ValueError, KeyError):
-                    continue
+                # Require all tile properties - no fallbacks
+                if 'name' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'name' for tile '{tile_id}'")
+                if 'character' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'character' for tile '{tile_id}'")
+                if 'font_color' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'font_color' for tile '{tile_id}'")
+                if 'background_color' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'background_color' for tile '{tile_id}'")
 
-        except Exception:
-            pass
+                tile_config = TileConfig(
+                    name=tile_data['name'],
+                    character=tile_data['character'],
+                    font_color=tile_data['font_color'],
+                    background_color=tile_data['background_color']
+                )
+                self.tiles[tile_id] = tile_config
+
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to load tile configuration from {self.config_file}: {e}") from e
     
 
 
@@ -96,8 +96,13 @@ class TileRegistry:
 
         Returns:
             TileConfig object with rendering information
+
+        Raises:
+            KeyError: If tile_id is not configured
         """
-        return self.tiles.get(tile_id, self.default_tile)
+        if tile_id not in self.tiles:
+            raise KeyError(f"❌ Tile '{tile_id}' is not configured. Available tiles: {list(self.tiles.keys())}")
+        return self.tiles[tile_id]
     
     def get_available_tiles(self) -> Dict[str, TileConfig]:
         """Get all available tile configurations."""
@@ -124,7 +129,10 @@ def get_tile_registry() -> TileRegistry:
     """Get the global tile registry instance."""
     global _tile_registry
     if _tile_registry is None:
-        _tile_registry = TileRegistry()
+        config_file = os.path.join("config", "tiles.toml")
+        if not os.path.exists(config_file):
+            raise FileNotFoundError(f"❌ Tile configuration file not found: {config_file}")
+        _tile_registry = TileRegistry(config_file)
     return _tile_registry
 
 
@@ -155,7 +163,7 @@ def get_tile_colors(tile_id: str) -> Tuple[Tuple[int, int, int], Tuple[int, int,
 # Example usage and testing
 if __name__ == "__main__":
     # Test the tile registry
-    registry = TileRegistry()
+    registry = TileRegistry(os.path.join("config", "tiles.toml"))
     
     print("Available tiles:")
     for tile_id, config in registry.get_available_tiles().items():

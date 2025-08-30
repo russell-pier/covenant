@@ -27,44 +27,40 @@ class ZoomLayer(GenerationLayer):
     while maintaining the overall geographic structure from previous layers.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__("zoom", config)
-        
-        # Load configuration from TOML file if no config provided
-        if not config:
-            self.config = self._load_config()
-        
-        # Extract configuration values
-        self.subdivision_factor = self._get_config_value('subdivision_factor', 2)
-        self.land_expansion_threshold = self._get_config_value('land_expansion_threshold', 3)
-        self.erosion_probability = self._get_config_value('erosion_probability', 0.25)
-        self.iterations = self._get_config_value('iterations', 6)
 
-        # Multi-pass configuration
-        self.use_multi_pass = self._get_config_value('use_multi_pass', True)
-        self.pass_1_iterations = self._get_config_value('pass_1_iterations', 3)
-        self.pass_1_expansion_threshold = self._get_config_value('pass_1_expansion_threshold', 2)
-        self.pass_1_erosion_probability = self._get_config_value('pass_1_erosion_probability', 0.1)
-        self.pass_2_iterations = self._get_config_value('pass_2_iterations', 3)
-        self.pass_2_expansion_threshold = self._get_config_value('pass_2_expansion_threshold', 4)
-        self.pass_2_erosion_probability = self._get_config_value('pass_2_erosion_probability', 0.3)
+        # Extract configuration values - all required
+        self.subdivision_factor = self._get_config_value('subdivision_factor')
+        self.land_expansion_threshold = self._get_config_value('land_expansion_threshold')
+        self.erosion_probability = self._get_config_value('erosion_probability')
+        self.iterations = self._get_config_value('iterations')
 
-        # Protection and advanced settings
-        self.protect_interior = self._get_config_value('protect_interior', False)
-        self.interior_threshold = self._get_config_value('interior_threshold', 8)
-        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood', True)
-        self.preserve_islands = self._get_config_value('preserve_islands', True)
-        self.min_island_size = self._get_config_value('min_island_size', 1)
+        # Multi-pass configuration - all required
+        self.use_multi_pass = self._get_config_value('use_multi_pass')
+        self.pass_1_iterations = self._get_config_value('pass_1_iterations')
+        self.pass_1_expansion_threshold = self._get_config_value('pass_1_expansion_threshold')
+        self.pass_1_erosion_probability = self._get_config_value('pass_1_erosion_probability')
+        self.pass_2_iterations = self._get_config_value('pass_2_iterations')
+        self.pass_2_expansion_threshold = self._get_config_value('pass_2_expansion_threshold')
+        self.pass_2_erosion_probability = self._get_config_value('pass_2_erosion_probability')
 
-        # Enhanced randomization
-        self.add_noise = self._get_config_value('add_noise', True)
-        self.noise_probability = self._get_config_value('noise_probability', 0.15)
-        self.edge_noise_boost = self._get_config_value('edge_noise_boost', True)
-        self.edge_noise_probability = self._get_config_value('edge_noise_probability', 0.25)
+        # Protection and advanced settings - all required
+        self.protect_interior = self._get_config_value('protect_interior')
+        self.interior_threshold = self._get_config_value('interior_threshold')
+        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood')
+        self.preserve_islands = self._get_config_value('preserve_islands')
+        self.min_island_size = self._get_config_value('min_island_size')
 
-        # Fractal enhancement
-        self.fractal_perturbation = self._get_config_value('fractal_perturbation', True)
-        self.perturbation_strength = self._get_config_value('perturbation_strength', 0.3)
+        # Enhanced randomization - all required
+        self.add_noise = self._get_config_value('add_noise')
+        self.noise_probability = self._get_config_value('noise_probability')
+        self.edge_noise_boost = self._get_config_value('edge_noise_boost')
+        self.edge_noise_probability = self._get_config_value('edge_noise_probability')
+
+        # Fractal enhancement - all required
+        self.fractal_perturbation = self._get_config_value('fractal_perturbation')
+        self.perturbation_strength = self._get_config_value('perturbation_strength')
         
         # Validate configuration
         if self.subdivision_factor < 2:
@@ -74,20 +70,7 @@ class ZoomLayer(GenerationLayer):
         if not (0.0 <= self.noise_probability <= 1.0):
             raise ValueError(f"noise_probability must be 0.0-1.0, got {self.noise_probability}")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from the layer's TOML file."""
-        # Look for config in the centralized config directory
-        config_path = os.path.join('config', 'world', 'layers', 'zoom.toml')
 
-        if not os.path.exists(config_path):
-            return {}
-
-        try:
-            with open(config_path, 'rb') as f:
-                data = tomllib.load(f)
-            return data.get('zoom', {})
-        except Exception as e:
-            return {}
     
     def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
         """

@@ -18,76 +18,70 @@ except ImportError:
 @dataclass
 class ApplicationConfig:
     """Application-level configuration."""
-    title: str = "2D Minecraft World - Spiral Generation"
-    version: str = "0.1.0"
+    title: str
+    version: str
 
 
 @dataclass
 class WindowConfig:
     """Window and display configuration."""
-    initial_width: int = 80
-    initial_height: int = 50
-    vsync: bool = True
+    initial_width: int
+    initial_height: int
+    vsync: bool
 
 
 @dataclass
 class WorldConfig:
     """World generation configuration."""
-    center_x: int = 0
-    center_y: int = 0
-    radius: int = 50
-    generator_type: str = "pipeline"
-    seed: int = 12345
-    chunk_size: int = 64
-    pipeline_layers: list = None
-    layer_configs: dict = None
+    center_x: int
+    center_y: int
+    radius: int
+    generator_type: str
+    seed: int
+    chunk_size: int
+    pipeline_layers: list
+    layer_configs: dict
     # Infinite world settings
-    render_distance: int = 3
-    chunk_cache_limit: int = 100
-    chunk_unload_distance: int = 5
-
-    def __post_init__(self):
-        if self.pipeline_layers is None:
-            self.pipeline_layers = ["lands_and_seas"]
-        if self.layer_configs is None:
-            self.layer_configs = {}
+    render_distance: int
+    chunk_cache_limit: int
+    chunk_unload_distance: int
 
 
 @dataclass
 class CameraConfig:
     """Camera and viewport configuration."""
-    initial_x: int = 0
-    initial_y: int = 0
-    move_speed: int = 1
-    fast_move_speed: int = 5
+    initial_x: int
+    initial_y: int
+    move_speed: int
+    fast_move_speed: int
 
 
 @dataclass
 class DebugConfig:
     """Debug display configuration."""
-    show_debug_on_startup: bool = False
-    show_coordinates_on_startup: bool = False
-    show_fps_on_startup: bool = False
+    show_debug_on_startup: bool
+    show_coordinates_on_startup: bool
+    show_fps_on_startup: bool
 
 
 @dataclass
 class RenderingConfig:
     """Rendering system configuration."""
-    seamless_blocks_enabled: bool = True
-    clear_color: Tuple[int, int, int] = (0, 0, 0)
+    seamless_blocks_enabled: bool
+    clear_color: Tuple[int, int, int]
 
 
 @dataclass
 class UIConfig:
     """User interface configuration."""
-    panel_background: Tuple[int, int, int] = (32, 32, 48)
-    border_color: Tuple[int, int, int] = (128, 128, 160)
-    info_color: Tuple[int, int, int] = (255, 255, 255)
-    warning_color: Tuple[int, int, int] = (255, 255, 0)
-    debug_color: Tuple[int, int, int] = (128, 255, 128)
-    top_panel_max_lines: int = 2
-    bottom_panel_max_lines: int = 3
-    panel_margin: int = 2
+    panel_background: Tuple[int, int, int]
+    border_color: Tuple[int, int, int]
+    info_color: Tuple[int, int, int]
+    warning_color: Tuple[int, int, int]
+    debug_color: Tuple[int, int, int]
+    top_panel_max_lines: int
+    bottom_panel_max_lines: int
+    panel_margin: int
 
 
 @dataclass
@@ -110,9 +104,9 @@ class ConfigLoader:
         self.config = self.load_config()
     
     def load_config(self) -> GameConfig:
-        """Load configuration from TOML file with fallback to defaults."""
+        """Load configuration from TOML file - fails if missing or invalid."""
         if not os.path.exists(self.config_file):
-            return self._create_default_config()
+            raise FileNotFoundError(f"❌ Configuration file not found: {self.config_file}")
 
         try:
             with open(self.config_file, 'rb') as f:
@@ -120,88 +114,139 @@ class ConfigLoader:
 
             return self._parse_config(config_data)
 
-        except Exception:
-            return self._create_default_config()
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to load configuration from {self.config_file}: {e}")
     
     def _parse_config(self, config_data: Dict[str, Any]) -> GameConfig:
         """Parse configuration data into structured config objects."""
-        
-        # Application config
-        app_data = config_data.get('application', {})
-        application = ApplicationConfig(
-            title=app_data.get('title', ApplicationConfig.title),
-            version=app_data.get('version', ApplicationConfig.version)
-        )
-        
-        # Window config
-        window_data = config_data.get('window', {})
-        window = WindowConfig(
-            initial_width=window_data.get('initial_width', WindowConfig.initial_width),
-            initial_height=window_data.get('initial_height', WindowConfig.initial_height),
-            vsync=window_data.get('vsync', WindowConfig.vsync)
-        )
-        
-        # World config
-        world_data = config_data.get('world', {})
 
-        # Extract pipeline layers and layer configs
-        pipeline_layers = world_data.get('pipeline_layers', ["lands_and_seas"])
+        # Application config - required
+        if 'application' not in config_data:
+            raise KeyError("❌ Missing required 'application' section in configuration")
+        app_data = config_data['application']
+        if 'title' not in app_data:
+            raise KeyError("❌ Missing required 'application.title' in configuration")
+        if 'version' not in app_data:
+            raise KeyError("❌ Missing required 'application.version' in configuration")
+        application = ApplicationConfig(
+            title=app_data['title'],
+            version=app_data['version']
+        )
+
+        # Window config - required
+        if 'window' not in config_data:
+            raise KeyError("❌ Missing required 'window' section in configuration")
+        window_data = config_data['window']
+        if 'initial_width' not in window_data:
+            raise KeyError("❌ Missing required 'window.initial_width' in configuration")
+        if 'initial_height' not in window_data:
+            raise KeyError("❌ Missing required 'window.initial_height' in configuration")
+        if 'vsync' not in window_data:
+            raise KeyError("❌ Missing required 'window.vsync' in configuration")
+        window = WindowConfig(
+            initial_width=window_data['initial_width'],
+            initial_height=window_data['initial_height'],
+            vsync=window_data['vsync']
+        )
+
+        # World config - required
+        if 'world' not in config_data:
+            raise KeyError("❌ Missing required 'world' section in configuration")
+        world_data = config_data['world']
+
+        # Extract pipeline layers and layer configs - required
+        if 'pipeline_layers' not in world_data:
+            raise KeyError("❌ Missing required 'world.pipeline_layers' in configuration")
+        pipeline_layers = world_data['pipeline_layers']
+        if not pipeline_layers:
+            raise ValueError("❌ 'world.pipeline_layers' cannot be empty")
         layer_configs = {}
 
-        # Extract layer-specific configurations
+        # Extract layer-specific configurations - all must be present
         for layer_name in pipeline_layers:
-            if layer_name in world_data:
-                layer_configs[layer_name] = world_data[layer_name]
+            if layer_name not in world_data:
+                raise KeyError(f"❌ Missing required configuration for layer '{layer_name}' in world config")
+            layer_configs[layer_name] = world_data[layer_name]
+
+        # World config validation
+        required_world_keys = ['center_x', 'center_y', 'radius', 'generator_type', 'seed', 'chunk_size', 'render_distance', 'chunk_cache_limit', 'chunk_unload_distance']
+        for key in required_world_keys:
+            if key not in world_data:
+                raise KeyError(f"❌ Missing required 'world.{key}' in configuration")
 
         world = WorldConfig(
-            center_x=world_data.get('center_x', WorldConfig.center_x),
-            center_y=world_data.get('center_y', WorldConfig.center_y),
-            radius=world_data.get('radius', WorldConfig.radius),
-            generator_type=world_data.get('generator_type', WorldConfig.generator_type),
-            seed=world_data.get('seed', WorldConfig.seed),
-            chunk_size=world_data.get('chunk_size', WorldConfig.chunk_size),
+            center_x=world_data['center_x'],
+            center_y=world_data['center_y'],
+            radius=world_data['radius'],
+            generator_type=world_data['generator_type'],
+            seed=world_data['seed'],
+            chunk_size=world_data['chunk_size'],
             pipeline_layers=pipeline_layers,
             layer_configs=layer_configs,
-            render_distance=world_data.get('render_distance', WorldConfig.render_distance),
-            chunk_cache_limit=world_data.get('chunk_cache_limit', WorldConfig.chunk_cache_limit),
-            chunk_unload_distance=world_data.get('chunk_unload_distance', WorldConfig.chunk_unload_distance)
+            render_distance=world_data['render_distance'],
+            chunk_cache_limit=world_data['chunk_cache_limit'],
+            chunk_unload_distance=world_data['chunk_unload_distance']
         )
 
-        # Camera config
-        camera_data = config_data.get('camera', {})
+        # Camera config - required
+        if 'camera' not in config_data:
+            raise KeyError("❌ Missing required 'camera' section in configuration")
+        camera_data = config_data['camera']
+        required_camera_keys = ['initial_x', 'initial_y', 'move_speed', 'fast_move_speed']
+        for key in required_camera_keys:
+            if key not in camera_data:
+                raise KeyError(f"❌ Missing required 'camera.{key}' in configuration")
         camera = CameraConfig(
-            initial_x=camera_data.get('initial_x', CameraConfig.initial_x),
-            initial_y=camera_data.get('initial_y', CameraConfig.initial_y),
-            move_speed=camera_data.get('move_speed', CameraConfig.move_speed),
-            fast_move_speed=camera_data.get('fast_move_speed', CameraConfig.fast_move_speed)
+            initial_x=camera_data['initial_x'],
+            initial_y=camera_data['initial_y'],
+            move_speed=camera_data['move_speed'],
+            fast_move_speed=camera_data['fast_move_speed']
         )
         
-        # Debug config
-        debug_data = config_data.get('debug', {})
+        # Debug config - required
+        if 'debug' not in config_data:
+            raise KeyError("❌ Missing required 'debug' section in configuration")
+        debug_data = config_data['debug']
+        required_debug_keys = ['show_debug_on_startup', 'show_coordinates_on_startup', 'show_fps_on_startup']
+        for key in required_debug_keys:
+            if key not in debug_data:
+                raise KeyError(f"❌ Missing required 'debug.{key}' in configuration")
         debug = DebugConfig(
-            show_debug_on_startup=debug_data.get('show_debug_on_startup', DebugConfig.show_debug_on_startup),
-            show_coordinates_on_startup=debug_data.get('show_coordinates_on_startup', DebugConfig.show_coordinates_on_startup),
-            show_fps_on_startup=debug_data.get('show_fps_on_startup', DebugConfig.show_fps_on_startup)
+            show_debug_on_startup=debug_data['show_debug_on_startup'],
+            show_coordinates_on_startup=debug_data['show_coordinates_on_startup'],
+            show_fps_on_startup=debug_data['show_fps_on_startup']
         )
         
-        # Rendering config
-        rendering_data = config_data.get('rendering', {})
+        # Rendering config - required
+        if 'rendering' not in config_data:
+            raise KeyError("❌ Missing required 'rendering' section in configuration")
+        rendering_data = config_data['rendering']
+        required_rendering_keys = ['seamless_blocks_enabled', 'clear_color']
+        for key in required_rendering_keys:
+            if key not in rendering_data:
+                raise KeyError(f"❌ Missing required 'rendering.{key}' in configuration")
         rendering = RenderingConfig(
-            seamless_blocks_enabled=rendering_data.get('seamless_blocks_enabled', RenderingConfig.seamless_blocks_enabled),
-            clear_color=tuple(rendering_data.get('clear_color', RenderingConfig.clear_color))
+            seamless_blocks_enabled=rendering_data['seamless_blocks_enabled'],
+            clear_color=tuple(rendering_data['clear_color'])
         )
         
-        # UI config
-        ui_data = config_data.get('ui', {})
+        # UI config - required
+        if 'ui' not in config_data:
+            raise KeyError("❌ Missing required 'ui' section in configuration")
+        ui_data = config_data['ui']
+        required_ui_keys = ['panel_background', 'border_color', 'info_color', 'warning_color', 'debug_color', 'top_panel_max_lines', 'bottom_panel_max_lines', 'panel_margin']
+        for key in required_ui_keys:
+            if key not in ui_data:
+                raise KeyError(f"❌ Missing required 'ui.{key}' in configuration")
         ui = UIConfig(
-            panel_background=tuple(ui_data.get('panel_background', UIConfig.panel_background)),
-            border_color=tuple(ui_data.get('border_color', UIConfig.border_color)),
-            info_color=tuple(ui_data.get('info_color', UIConfig.info_color)),
-            warning_color=tuple(ui_data.get('warning_color', UIConfig.warning_color)),
-            debug_color=tuple(ui_data.get('debug_color', UIConfig.debug_color)),
-            top_panel_max_lines=ui_data.get('top_panel_max_lines', UIConfig.top_panel_max_lines),
-            bottom_panel_max_lines=ui_data.get('bottom_panel_max_lines', UIConfig.bottom_panel_max_lines),
-            panel_margin=ui_data.get('panel_margin', UIConfig.panel_margin)
+            panel_background=tuple(ui_data['panel_background']),
+            border_color=tuple(ui_data['border_color']),
+            info_color=tuple(ui_data['info_color']),
+            warning_color=tuple(ui_data['warning_color']),
+            debug_color=tuple(ui_data['debug_color']),
+            top_panel_max_lines=ui_data['top_panel_max_lines'],
+            bottom_panel_max_lines=ui_data['bottom_panel_max_lines'],
+            panel_margin=ui_data['panel_margin']
         )
         
         return GameConfig(
@@ -214,17 +259,7 @@ class ConfigLoader:
             ui=ui
         )
     
-    def _create_default_config(self) -> GameConfig:
-        """Create default configuration."""
-        return GameConfig(
-            application=ApplicationConfig(),
-            window=WindowConfig(),
-            world=WorldConfig(),
-            camera=CameraConfig(),
-            debug=DebugConfig(),
-            rendering=RenderingConfig(),
-            ui=UIConfig()
-        )
+
     
     def reload_config(self):
         """Reload configuration from file."""

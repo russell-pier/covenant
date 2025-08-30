@@ -122,14 +122,17 @@ class WorldManager:
             # Load chunk tiles into cache
             self._cache_chunk_tiles(chunk_x, chunk_y)
             self.cache_hits += 1
-            return self.tile_cache.get((x, y), Tile(x, y, "loading"))
+            if (x, y) not in self.tile_cache:
+                raise RuntimeError(f"❌ Tile ({x}, {y}) not found in cache after loading chunk ({chunk_x}, {chunk_y})")
+            return self.tile_cache[(x, y)]
 
         # Request chunk if not already loading
         if (chunk_x, chunk_y) not in self.loading_chunks:
-            self._request_chunk_async(chunk_x, chunk_y)
+            from .messages import Priority
+            self._request_chunk_async(chunk_x, chunk_y, Priority.NORMAL)
             self.loading_chunks.add((chunk_x, chunk_y))
 
-        # Return placeholder immediately
+        # Return placeholder immediately (legitimate for async loading)
         self.cache_misses += 1
         return Tile(x, y, "loading")
 
@@ -138,11 +141,8 @@ class WorldManager:
         chunk_tiles = self.worker.get_chunk_tiles(chunk_x, chunk_y)
         self.tile_cache.update(chunk_tiles)
 
-    def _request_chunk_async(self, chunk_x: int, chunk_y: int, priority=None):
+    def _request_chunk_async(self, chunk_x: int, chunk_y: int, priority):
         """Request chunk generation asynchronously"""
-        if priority is None:
-            from .messages import Priority
-            priority = Priority.NORMAL
         self.worker.request_chunk(chunk_x, chunk_y, priority=priority)
         self.chunks_requested += 1
 

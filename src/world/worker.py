@@ -147,8 +147,12 @@ class WorldGenerationWorker:
                 if self.requests_processed % 10 == 0:
                     self._send_status_update()
                 
-            except Exception:
-                pass
+            except Exception as e:
+                # Log the error and terminate worker - no silent failures
+                error_msg = f"❌ Worker {self.worker_id} encountered fatal error: {e}"
+                print(error_msg)
+                self.running = False
+                raise RuntimeError(error_msg) from e
     
     def _process_message(self, message: Message):
         """Process a message from the main thread."""
@@ -298,7 +302,10 @@ class WorldGenerationWorker:
         # Create generation data for the pipeline
         generation_data = GenerationData(
             seed=self.seed,
-            chunk_size=effective_chunk_size
+            chunk_size=effective_chunk_size,
+            chunks={},
+            processed_layers=[],
+            custom_data={}
         )
 
         # Define bounds for pipeline processing (single chunk)

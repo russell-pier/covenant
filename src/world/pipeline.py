@@ -23,34 +23,40 @@ class GenerationData:
     chunk_size: int
     
     # Chunk data - maps (chunk_x, chunk_y) to chunk data
-    chunks: Dict[Tuple[int, int], Dict[str, Any]] = field(default_factory=dict)
-    
+    chunks: Dict[Tuple[int, int], Dict[str, Any]]
+
     # Layer metadata - tracks which layers have processed this data
-    processed_layers: List[str] = field(default_factory=list)
-    
+    processed_layers: List[str]
+
     # Custom data - layers can store arbitrary data here
-    custom_data: Dict[str, Any] = field(default_factory=dict)
+    custom_data: Dict[str, Any]
     
     def get_chunk(self, chunk_x: int, chunk_y: int) -> Dict[str, Any]:
-        """Get chunk data, creating empty chunk if it doesn't exist."""
+        """Get chunk data - fails if chunk doesn't exist."""
         chunk_key = (chunk_x, chunk_y)
         if chunk_key not in self.chunks:
+            raise KeyError(f"❌ Chunk ({chunk_x}, {chunk_y}) does not exist in generation data. Available chunks: {list(self.chunks.keys())}")
+        return self.chunks[chunk_key]
+    
+    def set_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, value: Any):
+        """Set a property on a specific chunk, creating the chunk if it doesn't exist."""
+        chunk_key = (chunk_x, chunk_y)
+        if chunk_key not in self.chunks:
+            # Create chunk with required basic properties
             self.chunks[chunk_key] = {
                 'chunk_x': chunk_x,
                 'chunk_y': chunk_y,
                 'chunk_size': self.chunk_size
             }
-        return self.chunks[chunk_key]
-    
-    def set_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, value: Any):
-        """Set a property on a specific chunk."""
-        chunk = self.get_chunk(chunk_x, chunk_y)
+        chunk = self.chunks[chunk_key]
         chunk[property_name] = value
     
-    def get_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, default: Any = None) -> Any:
-        """Get a property from a specific chunk."""
+    def get_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str) -> Any:
+        """Get a property from a specific chunk - fails if property doesn't exist."""
         chunk = self.get_chunk(chunk_x, chunk_y)
-        return chunk.get(property_name, default)
+        if property_name not in chunk:
+            raise KeyError(f"❌ Property '{property_name}' not found in chunk ({chunk_x}, {chunk_y}). Available properties: {list(chunk.keys())}")
+        return chunk[property_name]
 
 
 class GenerationLayer(ABC):
@@ -60,9 +66,11 @@ class GenerationLayer(ABC):
     Each layer processes GenerationData and adds its own information.
     """
     
-    def __init__(self, name: str, config: Dict[str, Any] = None):
+    def __init__(self, name: str, config: Dict[str, Any]):
         self.name = name
-        self.config = config or {}
+        if config is None:
+            raise ValueError(f"❌ Configuration is required for layer '{name}' - no fallback allowed")
+        self.config = config
         self.rng = random.Random()
     
     @abstractmethod
@@ -79,9 +87,11 @@ class GenerationLayer(ABC):
         """
         pass
     
-    def _get_config_value(self, key: str, default: Any = None) -> Any:
-        """Helper to get configuration values."""
-        return self.config.get(key, default)
+    def _get_config_value(self, key: str) -> Any:
+        """Helper to get configuration values - fails if key doesn't exist."""
+        if key not in self.config:
+            raise KeyError(f"❌ Required configuration key '{key}' not found for layer '{self.name}'. Available keys: {list(self.config.keys())}")
+        return self.config[key]
     
     def _set_seed(self, base_seed: int, *additional_components):
         """Set the RNG seed based on base seed and additional components."""
@@ -113,6 +123,9 @@ class GenerationPipeline:
         Returns:
             The processed generation data
         """
+        if not self.layers:
+            raise RuntimeError(f"❌ Pipeline '{self.name}' has no layers configured - cannot generate terrain")
+
         for layer in self.layers:
             data = layer.process(data, bounds)
             if layer.name not in data.processed_layers:

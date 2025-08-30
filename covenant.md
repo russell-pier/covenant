@@ -4,145 +4,6 @@ Generated from: `/Users/russellpier/Projects/covenant`
 
 ---
 
-## ASYNC_ARCHITECTURE_FIXES.md
-
-```markdown
-# Async Architecture Fixes Summary
-
-This document summarizes the comprehensive fixes applied to resolve the synchronous API in async system architecture problem.
-
-## 🎯 Problem Solved
-
-**Original Issue**: The main thread was calling `get_tile()` expecting immediate results, but the system was designed for async chunk loading, creating blocking waits that hurt performance.
-
-**Solution**: Implemented a complete non-blocking tile access system with predictive loading and proper message handling.
-
-## 🔧 Fix 1: Non-Blocking Tile Access
-
-### Changes Made:
-- **WorldManager State Management**: Added tile cache, loading chunks tracking, and ready chunks tracking
-- **Non-Blocking get_tile()**: Always returns immediately - either cached tile, ready tile, or "loading" placeholder
-- **Frame-by-Frame Processing**: Added `process_worker_messages()` called each frame in `render_frame()`
-
-### Key Code:
-```python
-def get_tile(self, x: int, y: int) -> Tile:
-    """Non-blocking tile access - always returns immediately"""
-    # Check tile cache first
-    if (x, y) in self.tile_cache:
-        return self.tile_cache[(x, y)]
-    
-    # Check if chunk is ready
-    chunk_x, chunk_y = self.world_to_render_chunk(x, y)
-    if (chunk_x, chunk_y) in self.ready_chunks:
-        self._cache_chunk_tiles(chunk_x, chunk_y)
-        return self.tile_cache.get((x, y), Tile(x, y, "stone"))
-    
-    # Request chunk if not already loading
-    if (chunk_x, chunk_y) not in self.loading_chunks:
-        self._request_chunk_async(chunk_x, chunk_y)
-        self.loading_chunks.add((chunk_x, chunk_y))
-    
-    # Return placeholder immediately
-    return Tile(x, y, "loading")
-```
-
-## 🔮 Fix 2: Predictive Chunk Loading
-
-### Changes Made:
-- **Smart Distance Calculation**: Immediate area (current screen) + preload area (smooth movement)
-- **Priority-Based Requests**: HIGH priority for immediate area, NORMAL for preload area
-- **Edge-Only Loading**: Only loads chunks on the edge of each distance ring for efficiency
-- **Memory Management**: Unloads distant chunks to prevent memory bloat
-
-### Key Code:
-```python
-def update_chunks(self, camera, screen_width: int = 80, screen_height: int = 50):
-    """Predictively load chunks around camera"""
-    # Load immediate area (current screen)
-    immediate_distance = max(screen_width // 64, screen_height // 64) + 1
-    
-    # Preload extended area (for smooth movement)
-    preload_distance = immediate_distance + 2
-    
-    # Request chunks in priority order
-    for distance in range(preload_distance + 1):
-        for dx in range(-distance, distance + 1):
-            for dy in range(-distance, distance + 1):
-                if abs(dx) == distance or abs(dy) == distance:  # Only edge chunks
-                    priority = Priority.HIGH if distance <= immediate_distance else Priority.NORMAL
-                    self._request_chunk_async(chunk_x, chunk_y, priority)
-```
-
-## 📨 Fix 3: Worker Message Handling
-
-### Changes Made:
-- **Simplified Response Format**: Minimal response data to reduce message overhead
-- **Immediate Response**: Send success/failure response as soon as chunk is generated
-- **Proper Error Handling**: Clear error responses with meaningful messages
-- **Message Processing Limits**: Limit messages processed per frame to avoid blocking
-
-### Key Code:
-```python
-def _handle_chunk_request(self, message: Message):
-    """Handle chunk generation with proper response"""
-    try:
-        render_chunk = self._generate_render_chunk(chunk_x, chunk_y)
-        self.render_chunk_cache[(chunk_x, chunk_y)] = render_chunk
-        
-        # Send success response immediately
-        response = Message.chunk_response(
-            chunk_x, chunk_y, 
-            {"status": "ready"},  # Minimal response data
-            request_id, generation_time, True, None, self.worker_id
-        )
-        self.message_bus.send_to_main(response, block=False)
-    except Exception as e:
-        # Send error response
-        response = Message.chunk_response(
-            chunk_x, chunk_y, {}, request_id, 0, False, str(e), self.worker_id
-        )
-        self.message_bus.send_to_main(response, block=False)
-```
-
-## 🎮 Integration in Game Loop
-
-### Render Frame Structure:
-```python
-@profile_function("game.render_frame")
-def render_frame(console):
-    # Process completed chunks from worker for non-blocking tile access
-    _world_manager.process_worker_messages()
-    
-    # Update world chunks based on camera position
-    _world_manager.update_chunks(_camera, console.width, console.height)
-    
-    # Rest of rendering...
-```
-
-## 📊 Performance Benefits
-
-1. **Eliminates Blocking**: Main thread never waits for world generation
-2. **Smooth 60 FPS**: Maintained even during heavy world generation
-3. **Predictive Loading**: Chunks ready before user needs them
-4. **Memory Efficient**: Automatic unloading of distant chunks
-5. **Priority System**: Important chunks load first
-6. **Progressive Updates**: "loading" tiles become real tiles seamlessly
-
-## 🧪 Testing
-
-Run `python test_async_fix.py` to verify all fixes work correctly:
-- ✅ Non-blocking tile access
-- ✅ Predictive chunk loading  
-- ✅ Priority-based requests
-- ✅ Worker message handling
-- ✅ Memory management
-
-## 🎉 Result
-
-The synchronous API in async system architecture problem is completely resolved. The game now provides smooth, responsive gameplay with seamless world loading that never blocks the main thread.
-```
-
 ## README.md
 
 ```markdown
@@ -386,145 +247,6 @@ The codebase is organized into distinct, modular components:
 Generated from: `/Users/russellpier/Projects/covenant`
 
 ---
-
-## ASYNC_ARCHITECTURE_FIXES.md
-
-```markdown
-# Async Architecture Fixes Summary
-
-This document summarizes the comprehensive fixes applied to resolve the synchronous API in async system architecture problem.
-
-## 🎯 Problem Solved
-
-**Original Issue**: The main thread was calling `get_tile()` expecting immediate results, but the system was designed for async chunk loading, creating blocking waits that hurt performance.
-
-**Solution**: Implemented a complete non-blocking tile access system with predictive loading and proper message handling.
-
-## 🔧 Fix 1: Non-Blocking Tile Access
-
-### Changes Made:
-- **WorldManager State Management**: Added tile cache, loading chunks tracking, and ready chunks tracking
-- **Non-Blocking get_tile()**: Always returns immediately - either cached tile, ready tile, or "loading" placeholder
-- **Frame-by-Frame Processing**: Added `process_worker_messages()` called each frame in `render_frame()`
-
-### Key Code:
-```python
-def get_tile(self, x: int, y: int) -> Tile:
-    """Non-blocking tile access - always returns immediately"""
-    # Check tile cache first
-    if (x, y) in self.tile_cache:
-        return self.tile_cache[(x, y)]
-    
-    # Check if chunk is ready
-    chunk_x, chunk_y = self.world_to_render_chunk(x, y)
-    if (chunk_x, chunk_y) in self.ready_chunks:
-        self._cache_chunk_tiles(chunk_x, chunk_y)
-        return self.tile_cache.get((x, y), Tile(x, y, "stone"))
-    
-    # Request chunk if not already loading
-    if (chunk_x, chunk_y) not in self.loading_chunks:
-        self._request_chunk_async(chunk_x, chunk_y)
-        self.loading_chunks.add((chunk_x, chunk_y))
-    
-    # Return placeholder immediately
-    return Tile(x, y, "loading")
-```
-
-## 🔮 Fix 2: Predictive Chunk Loading
-
-### Changes Made:
-- **Smart Distance Calculation**: Immediate area (current screen) + preload area (smooth movement)
-- **Priority-Based Requests**: HIGH priority for immediate area, NORMAL for preload area
-- **Edge-Only Loading**: Only loads chunks on the edge of each distance ring for efficiency
-- **Memory Management**: Unloads distant chunks to prevent memory bloat
-
-### Key Code:
-```python
-def update_chunks(self, camera, screen_width: int = 80, screen_height: int = 50):
-    """Predictively load chunks around camera"""
-    # Load immediate area (current screen)
-    immediate_distance = max(screen_width // 64, screen_height // 64) + 1
-    
-    # Preload extended area (for smooth movement)
-    preload_distance = immediate_distance + 2
-    
-    # Request chunks in priority order
-    for distance in range(preload_distance + 1):
-        for dx in range(-distance, distance + 1):
-            for dy in range(-distance, distance + 1):
-                if abs(dx) == distance or abs(dy) == distance:  # Only edge chunks
-                    priority = Priority.HIGH if distance <= immediate_distance else Priority.NORMAL
-                    self._request_chunk_async(chunk_x, chunk_y, priority)
-```
-
-## 📨 Fix 3: Worker Message Handling
-
-### Changes Made:
-- **Simplified Response Format**: Minimal response data to reduce message overhead
-- **Immediate Response**: Send success/failure response as soon as chunk is generated
-- **Proper Error Handling**: Clear error responses with meaningful messages
-- **Message Processing Limits**: Limit messages processed per frame to avoid blocking
-
-### Key Code:
-```python
-def _handle_chunk_request(self, message: Message):
-    """Handle chunk generation with proper response"""
-    try:
-        render_chunk = self._generate_render_chunk(chunk_x, chunk_y)
-        self.render_chunk_cache[(chunk_x, chunk_y)] = render_chunk
-        
-        # Send success response immediately
-        response = Message.chunk_response(
-            chunk_x, chunk_y, 
-            {"status": "ready"},  # Minimal response data
-            request_id, generation_time, True, None, self.worker_id
-        )
-        self.message_bus.send_to_main(response, block=False)
-    except Exception as e:
-        # Send error response
-        response = Message.chunk_response(
-            chunk_x, chunk_y, {}, request_id, 0, False, str(e), self.worker_id
-        )
-        self.message_bus.send_to_main(response, block=False)
-```
-
-## 🎮 Integration in Game Loop
-
-### Render Frame Structure:
-```python
-@profile_function("game.render_frame")
-def render_frame(console):
-    # Process completed chunks from worker for non-blocking tile access
-    _world_manager.process_worker_messages()
-    
-    # Update world chunks based on camera position
-    _world_manager.update_chunks(_camera, console.width, console.height)
-    
-    # Rest of rendering...
-```
-
-## 📊 Performance Benefits
-
-1. **Eliminates Blocking**: Main thread never waits for world generation
-2. **Smooth 60 FPS**: Maintained even during heavy world generation
-3. **Predictive Loading**: Chunks ready before user needs them
-4. **Memory Efficient**: Automatic unloading of distant chunks
-5. **Priority System**: Important chunks load first
-6. **Progressive Updates**: "loading" tiles become real tiles seamlessly
-
-## 🧪 Testing
-
-Run `python test_async_fix.py` to verify all fixes work correctly:
-- ✅ Non-blocking tile access
-- ✅ Predictive chunk loading  
-- ✅ Priority-based requests
-- ✅ Worker message handling
-- ✅ Memory management
-
-## 🎉 Result
-
-The synchronous API in async system architecture problem is completely resolved. The game now provides smooth, responsive gameplay with seamless world loading that never blocks the main thread.
-```
 
 ## README.md
 
@@ -851,7 +573,7 @@ def test_non_blocking_tile_access():
         # Create configuration
         config = WorldConfig()
         config.pipeline_layers = ["lands_and_seas"]
-        config.layer_configs = {"lands_and_seas": {"land_ratio": 3}}
+        config.layer_configs = {"lands_and_seas": {"land_ratio": 5, "algorithm": "cellular_automata"}}
         print("✅ Configuration created")
 
         # Create world manager
@@ -931,6 +653,93 @@ def test_non_blocking_tile_access():
 
 if __name__ == "__main__":
     test_non_blocking_tile_access()
+```
+
+## test_game_tiles.py
+
+```python
+#!/usr/bin/env python3
+"""
+Test script to verify the game renders tiles correctly without pink question marks
+"""
+
+def test_game_tile_rendering():
+    """Test that the game renders tiles correctly"""
+    try:
+        from src.config import WorldConfig
+        from src.world import WorldManager
+        from src.tiles import get_tile_registry
+        
+        print("🎮 Testing game tile rendering...")
+        
+        # Test tile registry first
+        registry = get_tile_registry()
+        print(f"✅ Tile registry loaded with {len(registry.get_available_tiles())} tiles")
+        
+        # Create world manager
+        config = WorldConfig()
+        config.pipeline_layers = ["lands_and_seas"]
+        config.layer_configs = {"lands_and_seas": {"land_ratio": 5, "algorithm": "cellular_automata"}}
+        
+        world_manager = WorldManager(config)
+        print("✅ WorldManager created")
+        
+        # Test tile access
+        print("\n🔍 Testing tile access:")
+        
+        # Get some tiles and check their types
+        test_positions = [(0, 0), (1, 1), (5, 5), (10, 10)]
+        
+        for x, y in test_positions:
+            tile = world_manager.get_tile(x, y)
+            config = registry.get_tile_config(tile.tile_type)
+            
+            if config.character == "?":
+                print(f"  ❌ Tile at ({x}, {y}): type='{tile.tile_type}' -> PINK QUESTION MARK")
+            else:
+                print(f"  ✅ Tile at ({x}, {y}): type='{tile.tile_type}' -> '{config.character}' {config.background_color}")
+        
+        # Process messages to see if chunks load
+        print("\n⏳ Processing worker messages...")
+        import time
+        for i in range(10):
+            world_manager.process_worker_messages()
+            time.sleep(0.1)
+        
+        # Check tiles again after processing
+        print("\n🔍 Re-checking tiles after processing:")
+        for x, y in test_positions:
+            tile = world_manager.get_tile(x, y)
+            config = registry.get_tile_config(tile.tile_type)
+            
+            if config.character == "?":
+                print(f"  ❌ Tile at ({x}, {y}): type='{tile.tile_type}' -> PINK QUESTION MARK")
+            else:
+                print(f"  ✅ Tile at ({x}, {y}): type='{tile.tile_type}' -> '{config.character}' {config.background_color}")
+        
+        # Get statistics
+        stats = world_manager.get_statistics()
+        print(f"\n📊 Statistics:")
+        print(f"  Available chunks: {stats['available_chunks']}")
+        print(f"  Loading chunks: {stats['loading_chunks']}")
+        print(f"  Cache hits: {stats['cache_hits']}")
+        print(f"  Cache misses: {stats['cache_misses']}")
+        
+        # Cleanup
+        world_manager.shutdown()
+        print("✅ WorldManager shutdown successful")
+        
+        print("\n🎉 Game tile rendering test completed!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+if __name__ == "__main__":
+    test_game_tile_rendering()
 ```
 
 ## test_imports.py
@@ -1142,6 +951,180 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
+## test_tier_manager.py
+
+```python
+#!/usr/bin/env python3
+"""
+Test script to verify TierManager configuration is working correctly
+"""
+
+def test_tier_manager_configuration():
+    """Test that TierManager accepts the correct configuration format"""
+    try:
+        from src.world.tier_manager import TierManager
+        
+        print("🏗️ Testing TierManager configuration...")
+        
+        # Create tier manager
+        tier_manager = TierManager()
+        print("✅ TierManager created successfully")
+        
+        # Test with correct format (list of tuples)
+        print("\n🔍 Testing correct configuration format (list of tuples):")
+        layer_configs = [
+            ("lands_and_seas", {"land_ratio": 5, "algorithm": "cellular_automata"}),
+        ]
+        
+        try:
+            tier_manager.set_world_tier(layer_configs)
+            print("✅ TierManager accepted list of tuples format")
+            
+            # Verify configuration
+            if tier_manager.is_configured():
+                print("✅ TierManager is properly configured")
+            else:
+                print("❌ TierManager configuration failed")
+                
+            # Test tier summary
+            summary = tier_manager.get_tier_summary()
+            print(f"✅ Tier summary: {summary}")
+            
+        except Exception as e:
+            print(f"❌ TierManager failed with list of tuples: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Test with incorrect format (dictionary) - should fail
+        print("\n🔍 Testing incorrect configuration format (dictionary):")
+        layer_configs_dict = {
+            "lands_and_seas": {"land_ratio": 5, "algorithm": "cellular_automata"}
+        }
+        
+        try:
+            tier_manager_2 = TierManager()
+            tier_manager_2.set_world_tier(layer_configs_dict)
+            print("❌ TierManager incorrectly accepted dictionary format")
+        except Exception as e:
+            print(f"✅ TierManager correctly rejected dictionary format: {type(e).__name__}")
+        
+        print("\n🎉 TierManager configuration test completed!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def test_world_manager_integration():
+    """Test that WorldManager properly configures TierManager"""
+    try:
+        from src.config import WorldConfig
+        from src.world import WorldManager
+        
+        print("\n🌍 Testing WorldManager integration with TierManager...")
+        
+        # Create configuration
+        config = WorldConfig()
+        config.pipeline_layers = ["lands_and_seas"]
+        config.layer_configs = {"lands_and_seas": {"land_ratio": 5}}
+        
+        # Create world manager (this should configure TierManager correctly)
+        world_manager = WorldManager(config)
+        print("✅ WorldManager created successfully")
+        
+        # Check if TierManager is configured
+        if world_manager.tier_manager.is_configured():
+            print("✅ TierManager is properly configured by WorldManager")
+        else:
+            print("❌ TierManager configuration failed in WorldManager")
+        
+        # Get tier summary
+        summary = world_manager.tier_manager.get_tier_summary()
+        print(f"✅ Tier summary from WorldManager: {summary}")
+        
+        # Cleanup
+        world_manager.shutdown()
+        print("✅ WorldManager shutdown successful")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ WorldManager integration test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+if __name__ == "__main__":
+    success1 = test_tier_manager_configuration()
+    success2 = test_world_manager_integration()
+    
+    if success1 and success2:
+        print("\n🎉 All TierManager tests passed!")
+    else:
+        print("\n❌ Some TierManager tests failed!")
+```
+
+## test_tiles.py
+
+```python
+#!/usr/bin/env python3
+"""
+Test script to verify tile configuration is working correctly
+"""
+
+def test_tile_configuration():
+    """Test that all required tiles are properly configured"""
+    try:
+        from src.tiles import get_tile_registry
+        
+        # Get the tile registry
+        registry = get_tile_registry()
+        print("✅ Tile registry loaded successfully")
+        
+        # Check for required tiles
+        required_tiles = ["stone", "land", "water", "loading"]
+        
+        print("\n🔍 Checking required tiles:")
+        for tile_type in required_tiles:
+            if registry.has_tile(tile_type):
+                config = registry.get_tile_config(tile_type)
+                print(f"  ✅ {tile_type}: '{config.character}' bg={config.background_color}")
+            else:
+                print(f"  ❌ {tile_type}: MISSING")
+        
+        # Test getting a missing tile (should fail hard)
+        try:
+            missing_config = registry.get_tile_config("nonexistent")
+            print(f"\n❌ ERROR: Missing tile should have failed but got: '{missing_config.character}'")
+        except KeyError as e:
+            print(f"\n✅ Missing tile test: Correctly failed with {e}")
+
+        # Test the world generation tile types
+        print("\n🌍 Testing world generation compatibility:")
+        world_tile_types = ["land", "water"]  # These are generated by lands_and_seas layer
+
+        for tile_type in world_tile_types:
+            try:
+                config = registry.get_tile_config(tile_type)
+                print(f"  ✅ {tile_type}: Properly configured")
+            except KeyError:
+                print(f"  ❌ {tile_type}: Not configured - system will fail")
+        
+        print("\n🎉 Tile configuration test completed!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+if __name__ == "__main__":
+    test_tile_configuration()
+```
+
 ## config/config.toml
 
 ```toml
@@ -1168,9 +1151,14 @@ chunk_cache_limit = 100  # Maximum number of chunks to keep in memory
 chunk_unload_distance = 5  # Unload chunks beyond this distance from screen viewport
 
 # World generation pipeline configuration
-# lands_and_seas: 64x64 → zoom: 32x32 (one zoom layer for cellular automata noise)
+# lands_and_seas: 64x64 → zoom: 32x32 → islands: convert isolated water to land
 pipeline_layers = [
     "lands_and_seas",
+    "zoom", 
+    "islands",
+    "zoom",
+    "islands",
+    "zoom",
     "zoom"
 ]
 
@@ -1193,10 +1181,32 @@ land_expansion_threshold = 6  # Much higher threshold - land needs many neighbor
 erosion_probability = 0.1
 iterations = 2  # Fewer iterations to prevent runaway growth
 use_multi_pass = false  # Disable multi-pass for simpler, controlled expansion
+pass_1_iterations = 3
+pass_1_expansion_threshold = 2
+pass_1_erosion_probability = 0.1
+pass_2_iterations = 3
+pass_2_expansion_threshold = 4
+pass_2_erosion_probability = 0.3
+protect_interior = false
+interior_threshold = 8
+use_moore_neighborhood = true
+preserve_islands = true
+min_island_size = 1
 fractal_perturbation = false  # Disable for cleaner testing
+perturbation_strength = 0.3
 edge_noise_boost = false
 add_noise = false
 noise_probability = 0.0
+edge_noise_probability = 0.25
+
+[world.islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+use_moore_neighborhood = true
+# Require all 8 neighbors to be land for conversion
+min_land_neighbors = 8
+require_all_neighbors = true
 
 [debug]
 show_debug_on_startup = true
@@ -1298,6 +1308,12 @@ character = "█"
 font_color = [128, 128, 128]  # Gray (not used in seamless mode)
 background_color = [128, 128, 128]  # Gray - this fills the entire cell seamlessly
 
+[land]
+name = "Land"
+character = "█"
+font_color = [139, 69, 19]  # Brown (not used in seamless mode)
+background_color = [139, 69, 19]  # Brown - this fills the entire cell seamlessly
+
 [water]
 name = "Water"
 character = "█"
@@ -1314,7 +1330,129 @@ background_color = [0, 0, 0]  # Transparent black background
 name = "Loading"
 character = "░"
 font_color = [192, 192, 192]  # Light gray
-background_color = [0, 0, 0]  # Black background
+background_color = [64, 64, 64]  # Dark gray background
+
+[grass]
+name = "Grass"
+character = "█"
+font_color = [34, 139, 34]  # Forest green (not used in seamless mode)
+background_color = [34, 139, 34]  # Forest green - this fills the entire cell seamlessly
+
+[sand]
+name = "Sand"
+character = "█"
+font_color = [238, 203, 173]  # Sandy brown (not used in seamless mode)
+background_color = [238, 203, 173]  # Sandy brown - this fills the entire cell seamlessly
+```
+
+## config/world/layers/add_islands.toml
+
+```toml
+# Example update to config/config.toml showing how to use the islands layer
+
+[world]
+center_x = 0
+center_y = 0
+radius = 50
+generator_type = "pipeline"
+seed = 123456
+chunk_size = 64
+
+# World generation pipeline configuration
+# Updated to include the new islands layer at the end
+pipeline_layers = [
+    "lands_and_seas",
+    "zoom", 
+    "islands"  # New islands layer - converts isolated water to land
+]
+
+# Layer-specific configurations
+[world.lands_and_seas]
+land_ratio = 3
+algorithm = "random_chunks"
+
+[world.zoom] 
+subdivision_factor = 2
+land_expansion_threshold = 6
+erosion_probability = 0.1
+iterations = 2
+use_multi_pass = false
+fractal_perturbation = false
+edge_noise_boost = false
+add_noise = false
+noise_probability = 0.0
+
+[world.islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+use_moore_neighborhood = true
+# Require all 8 neighbors to be land for conversion
+min_land_neighbors = 8
+require_all_neighbors = true
+
+# Alternative island configurations you can try:
+
+# Conservative islands (fewer, only perfect enclosures)
+# [world.islands]
+# conversion_probability = 0.6
+# min_land_neighbors = 8
+# require_all_neighbors = true
+
+# Aggressive island creation (more islands, looser requirements)
+# [world.islands] 
+# conversion_probability = 1.0
+# min_land_neighbors = 6
+# require_all_neighbors = false
+
+# Coastal bay filling (fill small water pockets)
+# [world.islands]
+# conversion_probability = 0.9
+# min_land_neighbors = 7
+# require_all_neighbors = false
+```
+
+## config/world/layers/islands.toml
+
+```toml
+# Islands Layer Configuration
+# Converts isolated water chunks (completely surrounded by land) into land chunks.
+# This creates small islands and fills in water gaps within landmasses for more
+# natural-looking terrain.
+
+[islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+# If false, uses 4-neighbor Von Neumann neighborhood (orthogonal only)
+use_moore_neighborhood = true
+
+# Minimum number of land neighbors required for conversion
+# For Moore neighborhood (8-neighbor): max is 8
+# For Von Neumann neighborhood (4-neighbor): max is 4
+min_land_neighbors = 8
+
+# Whether to require all neighbors to be present (not out-of-bounds)
+# If true, chunks near world edges are less likely to be converted
+require_all_neighbors = true
+
+# Alternative configurations you can try:
+
+# Conservative islands (fewer, only perfect enclosures)
+# conversion_probability = 0.6
+# min_land_neighbors = 8
+# require_all_neighbors = true
+
+# Aggressive island creation (more islands, looser requirements)
+# conversion_probability = 1.0
+# min_land_neighbors = 6
+# require_all_neighbors = false
+
+# Coastal bay filling (fill small water pockets)
+# conversion_probability = 0.9
+# min_land_neighbors = 7
+# require_all_neighbors = false
 ```
 
 ## config/world/layers/lands_and_seas.toml
@@ -2110,76 +2248,70 @@ except ImportError:
 @dataclass
 class ApplicationConfig:
     """Application-level configuration."""
-    title: str = "2D Minecraft World - Spiral Generation"
-    version: str = "0.1.0"
+    title: str
+    version: str
 
 
 @dataclass
 class WindowConfig:
     """Window and display configuration."""
-    initial_width: int = 80
-    initial_height: int = 50
-    vsync: bool = True
+    initial_width: int
+    initial_height: int
+    vsync: bool
 
 
 @dataclass
 class WorldConfig:
     """World generation configuration."""
-    center_x: int = 0
-    center_y: int = 0
-    radius: int = 50
-    generator_type: str = "pipeline"
-    seed: int = 12345
-    chunk_size: int = 64
-    pipeline_layers: list = None
-    layer_configs: dict = None
+    center_x: int
+    center_y: int
+    radius: int
+    generator_type: str
+    seed: int
+    chunk_size: int
+    pipeline_layers: list
+    layer_configs: dict
     # Infinite world settings
-    render_distance: int = 3
-    chunk_cache_limit: int = 100
-    chunk_unload_distance: int = 5
-
-    def __post_init__(self):
-        if self.pipeline_layers is None:
-            self.pipeline_layers = ["lands_and_seas"]
-        if self.layer_configs is None:
-            self.layer_configs = {}
+    render_distance: int
+    chunk_cache_limit: int
+    chunk_unload_distance: int
 
 
 @dataclass
 class CameraConfig:
     """Camera and viewport configuration."""
-    initial_x: int = 0
-    initial_y: int = 0
-    move_speed: int = 1
-    fast_move_speed: int = 5
+    initial_x: int
+    initial_y: int
+    move_speed: int
+    fast_move_speed: int
 
 
 @dataclass
 class DebugConfig:
     """Debug display configuration."""
-    show_debug_on_startup: bool = False
-    show_coordinates_on_startup: bool = False
-    show_fps_on_startup: bool = False
+    show_debug_on_startup: bool
+    show_coordinates_on_startup: bool
+    show_fps_on_startup: bool
 
 
 @dataclass
 class RenderingConfig:
     """Rendering system configuration."""
-    seamless_blocks_enabled: bool = True
-    clear_color: Tuple[int, int, int] = (0, 0, 0)
+    seamless_blocks_enabled: bool
+    clear_color: Tuple[int, int, int]
 
 
 @dataclass
 class UIConfig:
     """User interface configuration."""
-    panel_background: Tuple[int, int, int] = (32, 32, 48)
-    border_color: Tuple[int, int, int] = (128, 128, 160)
-    info_color: Tuple[int, int, int] = (255, 255, 255)
-    warning_color: Tuple[int, int, int] = (255, 255, 0)
-    debug_color: Tuple[int, int, int] = (128, 255, 128)
-    top_panel_max_lines: int = 2
-    bottom_panel_max_lines: int = 3
-    panel_margin: int = 2
+    panel_background: Tuple[int, int, int]
+    border_color: Tuple[int, int, int]
+    info_color: Tuple[int, int, int]
+    warning_color: Tuple[int, int, int]
+    debug_color: Tuple[int, int, int]
+    top_panel_max_lines: int
+    bottom_panel_max_lines: int
+    panel_margin: int
 
 
 @dataclass
@@ -2202,9 +2334,9 @@ class ConfigLoader:
         self.config = self.load_config()
     
     def load_config(self) -> GameConfig:
-        """Load configuration from TOML file with fallback to defaults."""
+        """Load configuration from TOML file - fails if missing or invalid."""
         if not os.path.exists(self.config_file):
-            return self._create_default_config()
+            raise FileNotFoundError(f"❌ Configuration file not found: {self.config_file}")
 
         try:
             with open(self.config_file, 'rb') as f:
@@ -2212,88 +2344,139 @@ class ConfigLoader:
 
             return self._parse_config(config_data)
 
-        except Exception:
-            return self._create_default_config()
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to load configuration from {self.config_file}: {e}")
     
     def _parse_config(self, config_data: Dict[str, Any]) -> GameConfig:
         """Parse configuration data into structured config objects."""
-        
-        # Application config
-        app_data = config_data.get('application', {})
-        application = ApplicationConfig(
-            title=app_data.get('title', ApplicationConfig.title),
-            version=app_data.get('version', ApplicationConfig.version)
-        )
-        
-        # Window config
-        window_data = config_data.get('window', {})
-        window = WindowConfig(
-            initial_width=window_data.get('initial_width', WindowConfig.initial_width),
-            initial_height=window_data.get('initial_height', WindowConfig.initial_height),
-            vsync=window_data.get('vsync', WindowConfig.vsync)
-        )
-        
-        # World config
-        world_data = config_data.get('world', {})
 
-        # Extract pipeline layers and layer configs
-        pipeline_layers = world_data.get('pipeline_layers', ["lands_and_seas"])
+        # Application config - required
+        if 'application' not in config_data:
+            raise KeyError("❌ Missing required 'application' section in configuration")
+        app_data = config_data['application']
+        if 'title' not in app_data:
+            raise KeyError("❌ Missing required 'application.title' in configuration")
+        if 'version' not in app_data:
+            raise KeyError("❌ Missing required 'application.version' in configuration")
+        application = ApplicationConfig(
+            title=app_data['title'],
+            version=app_data['version']
+        )
+
+        # Window config - required
+        if 'window' not in config_data:
+            raise KeyError("❌ Missing required 'window' section in configuration")
+        window_data = config_data['window']
+        if 'initial_width' not in window_data:
+            raise KeyError("❌ Missing required 'window.initial_width' in configuration")
+        if 'initial_height' not in window_data:
+            raise KeyError("❌ Missing required 'window.initial_height' in configuration")
+        if 'vsync' not in window_data:
+            raise KeyError("❌ Missing required 'window.vsync' in configuration")
+        window = WindowConfig(
+            initial_width=window_data['initial_width'],
+            initial_height=window_data['initial_height'],
+            vsync=window_data['vsync']
+        )
+
+        # World config - required
+        if 'world' not in config_data:
+            raise KeyError("❌ Missing required 'world' section in configuration")
+        world_data = config_data['world']
+
+        # Extract pipeline layers and layer configs - required
+        if 'pipeline_layers' not in world_data:
+            raise KeyError("❌ Missing required 'world.pipeline_layers' in configuration")
+        pipeline_layers = world_data['pipeline_layers']
+        if not pipeline_layers:
+            raise ValueError("❌ 'world.pipeline_layers' cannot be empty")
         layer_configs = {}
 
-        # Extract layer-specific configurations
+        # Extract layer-specific configurations - all must be present
         for layer_name in pipeline_layers:
-            if layer_name in world_data:
-                layer_configs[layer_name] = world_data[layer_name]
+            if layer_name not in world_data:
+                raise KeyError(f"❌ Missing required configuration for layer '{layer_name}' in world config")
+            layer_configs[layer_name] = world_data[layer_name]
+
+        # World config validation
+        required_world_keys = ['center_x', 'center_y', 'radius', 'generator_type', 'seed', 'chunk_size', 'render_distance', 'chunk_cache_limit', 'chunk_unload_distance']
+        for key in required_world_keys:
+            if key not in world_data:
+                raise KeyError(f"❌ Missing required 'world.{key}' in configuration")
 
         world = WorldConfig(
-            center_x=world_data.get('center_x', WorldConfig.center_x),
-            center_y=world_data.get('center_y', WorldConfig.center_y),
-            radius=world_data.get('radius', WorldConfig.radius),
-            generator_type=world_data.get('generator_type', WorldConfig.generator_type),
-            seed=world_data.get('seed', WorldConfig.seed),
-            chunk_size=world_data.get('chunk_size', WorldConfig.chunk_size),
+            center_x=world_data['center_x'],
+            center_y=world_data['center_y'],
+            radius=world_data['radius'],
+            generator_type=world_data['generator_type'],
+            seed=world_data['seed'],
+            chunk_size=world_data['chunk_size'],
             pipeline_layers=pipeline_layers,
             layer_configs=layer_configs,
-            render_distance=world_data.get('render_distance', WorldConfig.render_distance),
-            chunk_cache_limit=world_data.get('chunk_cache_limit', WorldConfig.chunk_cache_limit),
-            chunk_unload_distance=world_data.get('chunk_unload_distance', WorldConfig.chunk_unload_distance)
+            render_distance=world_data['render_distance'],
+            chunk_cache_limit=world_data['chunk_cache_limit'],
+            chunk_unload_distance=world_data['chunk_unload_distance']
         )
 
-        # Camera config
-        camera_data = config_data.get('camera', {})
+        # Camera config - required
+        if 'camera' not in config_data:
+            raise KeyError("❌ Missing required 'camera' section in configuration")
+        camera_data = config_data['camera']
+        required_camera_keys = ['initial_x', 'initial_y', 'move_speed', 'fast_move_speed']
+        for key in required_camera_keys:
+            if key not in camera_data:
+                raise KeyError(f"❌ Missing required 'camera.{key}' in configuration")
         camera = CameraConfig(
-            initial_x=camera_data.get('initial_x', CameraConfig.initial_x),
-            initial_y=camera_data.get('initial_y', CameraConfig.initial_y),
-            move_speed=camera_data.get('move_speed', CameraConfig.move_speed),
-            fast_move_speed=camera_data.get('fast_move_speed', CameraConfig.fast_move_speed)
+            initial_x=camera_data['initial_x'],
+            initial_y=camera_data['initial_y'],
+            move_speed=camera_data['move_speed'],
+            fast_move_speed=camera_data['fast_move_speed']
         )
         
-        # Debug config
-        debug_data = config_data.get('debug', {})
+        # Debug config - required
+        if 'debug' not in config_data:
+            raise KeyError("❌ Missing required 'debug' section in configuration")
+        debug_data = config_data['debug']
+        required_debug_keys = ['show_debug_on_startup', 'show_coordinates_on_startup', 'show_fps_on_startup']
+        for key in required_debug_keys:
+            if key not in debug_data:
+                raise KeyError(f"❌ Missing required 'debug.{key}' in configuration")
         debug = DebugConfig(
-            show_debug_on_startup=debug_data.get('show_debug_on_startup', DebugConfig.show_debug_on_startup),
-            show_coordinates_on_startup=debug_data.get('show_coordinates_on_startup', DebugConfig.show_coordinates_on_startup),
-            show_fps_on_startup=debug_data.get('show_fps_on_startup', DebugConfig.show_fps_on_startup)
+            show_debug_on_startup=debug_data['show_debug_on_startup'],
+            show_coordinates_on_startup=debug_data['show_coordinates_on_startup'],
+            show_fps_on_startup=debug_data['show_fps_on_startup']
         )
         
-        # Rendering config
-        rendering_data = config_data.get('rendering', {})
+        # Rendering config - required
+        if 'rendering' not in config_data:
+            raise KeyError("❌ Missing required 'rendering' section in configuration")
+        rendering_data = config_data['rendering']
+        required_rendering_keys = ['seamless_blocks_enabled', 'clear_color']
+        for key in required_rendering_keys:
+            if key not in rendering_data:
+                raise KeyError(f"❌ Missing required 'rendering.{key}' in configuration")
         rendering = RenderingConfig(
-            seamless_blocks_enabled=rendering_data.get('seamless_blocks_enabled', RenderingConfig.seamless_blocks_enabled),
-            clear_color=tuple(rendering_data.get('clear_color', RenderingConfig.clear_color))
+            seamless_blocks_enabled=rendering_data['seamless_blocks_enabled'],
+            clear_color=tuple(rendering_data['clear_color'])
         )
         
-        # UI config
-        ui_data = config_data.get('ui', {})
+        # UI config - required
+        if 'ui' not in config_data:
+            raise KeyError("❌ Missing required 'ui' section in configuration")
+        ui_data = config_data['ui']
+        required_ui_keys = ['panel_background', 'border_color', 'info_color', 'warning_color', 'debug_color', 'top_panel_max_lines', 'bottom_panel_max_lines', 'panel_margin']
+        for key in required_ui_keys:
+            if key not in ui_data:
+                raise KeyError(f"❌ Missing required 'ui.{key}' in configuration")
         ui = UIConfig(
-            panel_background=tuple(ui_data.get('panel_background', UIConfig.panel_background)),
-            border_color=tuple(ui_data.get('border_color', UIConfig.border_color)),
-            info_color=tuple(ui_data.get('info_color', UIConfig.info_color)),
-            warning_color=tuple(ui_data.get('warning_color', UIConfig.warning_color)),
-            debug_color=tuple(ui_data.get('debug_color', UIConfig.debug_color)),
-            top_panel_max_lines=ui_data.get('top_panel_max_lines', UIConfig.top_panel_max_lines),
-            bottom_panel_max_lines=ui_data.get('bottom_panel_max_lines', UIConfig.bottom_panel_max_lines),
-            panel_margin=ui_data.get('panel_margin', UIConfig.panel_margin)
+            panel_background=tuple(ui_data['panel_background']),
+            border_color=tuple(ui_data['border_color']),
+            info_color=tuple(ui_data['info_color']),
+            warning_color=tuple(ui_data['warning_color']),
+            debug_color=tuple(ui_data['debug_color']),
+            top_panel_max_lines=ui_data['top_panel_max_lines'],
+            bottom_panel_max_lines=ui_data['bottom_panel_max_lines'],
+            panel_margin=ui_data['panel_margin']
         )
         
         return GameConfig(
@@ -2306,17 +2489,7 @@ class ConfigLoader:
             ui=ui
         )
     
-    def _create_default_config(self) -> GameConfig:
-        """Create default configuration."""
-        return GameConfig(
-            application=ApplicationConfig(),
-            window=WindowConfig(),
-            world=WorldConfig(),
-            camera=CameraConfig(),
-            debug=DebugConfig(),
-            rendering=RenderingConfig(),
-            ui=UIConfig()
-        )
+
     
     def reload_config(self):
         """Reload configuration from file."""
@@ -2614,22 +2787,15 @@ class TileConfig:
 class TileRegistry:
     """Registry for all tile configurations."""
 
-    def __init__(self, config_file: str = None):
+    def __init__(self, config_file: str):
         self.tiles: Dict[str, TileConfig] = {}
-        # Default to centralized config location
-        self.config_file = config_file or os.path.join("config", "tiles.toml")
-        self.default_tile = TileConfig(
-            name="Unknown",
-            character="?",
-            font_color=(255, 0, 255),  # Magenta to make missing tiles obvious
-            background_color=(128, 0, 128)
-        )
+        self.config_file = config_file
         self.load_tiles()
     
     def load_tiles(self):
-        """Load tile configurations from the TOML file."""
+        """Load tile configurations from the TOML file - fails if missing or invalid."""
         if not os.path.exists(self.config_file):
-            return
+            raise FileNotFoundError(f"❌ Tile configuration file not found: {self.config_file}")
 
         try:
             with open(self.config_file, 'rb') as f:
@@ -2638,19 +2804,26 @@ class TileRegistry:
             self.tiles.clear()
 
             for tile_id, tile_data in config_data.items():
-                try:
-                    tile_config = TileConfig(
-                        name=tile_data.get('name', tile_id.title()),
-                        character=tile_data.get('character', '?'),
-                        font_color=tile_data.get('font_color', [255, 255, 255]),
-                        background_color=tile_data.get('background_color', [0, 0, 0])
-                    )
-                    self.tiles[tile_id] = tile_config
-                except (ValueError, KeyError):
-                    continue
+                # Require all tile properties - no fallbacks
+                if 'name' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'name' for tile '{tile_id}'")
+                if 'character' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'character' for tile '{tile_id}'")
+                if 'font_color' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'font_color' for tile '{tile_id}'")
+                if 'background_color' not in tile_data:
+                    raise KeyError(f"❌ Missing required 'background_color' for tile '{tile_id}'")
 
-        except Exception:
-            pass
+                tile_config = TileConfig(
+                    name=tile_data['name'],
+                    character=tile_data['character'],
+                    font_color=tile_data['font_color'],
+                    background_color=tile_data['background_color']
+                )
+                self.tiles[tile_id] = tile_config
+
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to load tile configuration from {self.config_file}: {e}") from e
     
 
 
@@ -2664,8 +2837,13 @@ class TileRegistry:
 
         Returns:
             TileConfig object with rendering information
+
+        Raises:
+            KeyError: If tile_id is not configured
         """
-        return self.tiles.get(tile_id, self.default_tile)
+        if tile_id not in self.tiles:
+            raise KeyError(f"❌ Tile '{tile_id}' is not configured. Available tiles: {list(self.tiles.keys())}")
+        return self.tiles[tile_id]
     
     def get_available_tiles(self) -> Dict[str, TileConfig]:
         """Get all available tile configurations."""
@@ -2692,7 +2870,10 @@ def get_tile_registry() -> TileRegistry:
     """Get the global tile registry instance."""
     global _tile_registry
     if _tile_registry is None:
-        _tile_registry = TileRegistry()
+        config_file = os.path.join("config", "tiles.toml")
+        if not os.path.exists(config_file):
+            raise FileNotFoundError(f"❌ Tile configuration file not found: {config_file}")
+        _tile_registry = TileRegistry(config_file)
     return _tile_registry
 
 
@@ -2723,7 +2904,7 @@ def get_tile_colors(tile_id: str) -> Tuple[Tuple[int, int, int], Tuple[int, int,
 # Example usage and testing
 if __name__ == "__main__":
     # Test the tile registry
-    registry = TileRegistry()
+    registry = TileRegistry(os.path.join("config", "tiles.toml"))
     
     print("Available tiles:")
     for tile_id, config in registry.get_available_tiles().items():
@@ -3746,7 +3927,7 @@ class DualChunkManager:
                     render_min_y <= world_y <= render_max_y):
                     # Extract tile_type from tile_data dictionary
                     if isinstance(tile_data, dict):
-                        tile_type = tile_data.get('tile_type', 'stone')
+                        tile_type = tile_data.get('tile_type', 'land')
                     else:
                         tile_type = tile_data  # Fallback if it's already a string
                     aggregated_tiles[(world_x, world_y)] = tile_type
@@ -4158,34 +4339,40 @@ class GenerationData:
     chunk_size: int
     
     # Chunk data - maps (chunk_x, chunk_y) to chunk data
-    chunks: Dict[Tuple[int, int], Dict[str, Any]] = field(default_factory=dict)
-    
+    chunks: Dict[Tuple[int, int], Dict[str, Any]]
+
     # Layer metadata - tracks which layers have processed this data
-    processed_layers: List[str] = field(default_factory=list)
-    
+    processed_layers: List[str]
+
     # Custom data - layers can store arbitrary data here
-    custom_data: Dict[str, Any] = field(default_factory=dict)
+    custom_data: Dict[str, Any]
     
     def get_chunk(self, chunk_x: int, chunk_y: int) -> Dict[str, Any]:
-        """Get chunk data, creating empty chunk if it doesn't exist."""
+        """Get chunk data - fails if chunk doesn't exist."""
         chunk_key = (chunk_x, chunk_y)
         if chunk_key not in self.chunks:
+            raise KeyError(f"❌ Chunk ({chunk_x}, {chunk_y}) does not exist in generation data. Available chunks: {list(self.chunks.keys())}")
+        return self.chunks[chunk_key]
+    
+    def set_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, value: Any):
+        """Set a property on a specific chunk, creating the chunk if it doesn't exist."""
+        chunk_key = (chunk_x, chunk_y)
+        if chunk_key not in self.chunks:
+            # Create chunk with required basic properties
             self.chunks[chunk_key] = {
                 'chunk_x': chunk_x,
                 'chunk_y': chunk_y,
                 'chunk_size': self.chunk_size
             }
-        return self.chunks[chunk_key]
-    
-    def set_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, value: Any):
-        """Set a property on a specific chunk."""
-        chunk = self.get_chunk(chunk_x, chunk_y)
+        chunk = self.chunks[chunk_key]
         chunk[property_name] = value
     
-    def get_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str, default: Any = None) -> Any:
-        """Get a property from a specific chunk."""
+    def get_chunk_property(self, chunk_x: int, chunk_y: int, property_name: str) -> Any:
+        """Get a property from a specific chunk - fails if property doesn't exist."""
         chunk = self.get_chunk(chunk_x, chunk_y)
-        return chunk.get(property_name, default)
+        if property_name not in chunk:
+            raise KeyError(f"❌ Property '{property_name}' not found in chunk ({chunk_x}, {chunk_y}). Available properties: {list(chunk.keys())}")
+        return chunk[property_name]
 
 
 class GenerationLayer(ABC):
@@ -4195,9 +4382,11 @@ class GenerationLayer(ABC):
     Each layer processes GenerationData and adds its own information.
     """
     
-    def __init__(self, name: str, config: Dict[str, Any] = None):
+    def __init__(self, name: str, config: Dict[str, Any]):
         self.name = name
-        self.config = config or {}
+        if config is None:
+            raise ValueError(f"❌ Configuration is required for layer '{name}' - no fallback allowed")
+        self.config = config
         self.rng = random.Random()
     
     @abstractmethod
@@ -4214,9 +4403,11 @@ class GenerationLayer(ABC):
         """
         pass
     
-    def _get_config_value(self, key: str, default: Any = None) -> Any:
-        """Helper to get configuration values."""
-        return self.config.get(key, default)
+    def _get_config_value(self, key: str) -> Any:
+        """Helper to get configuration values - fails if key doesn't exist."""
+        if key not in self.config:
+            raise KeyError(f"❌ Required configuration key '{key}' not found for layer '{self.name}'. Available keys: {list(self.config.keys())}")
+        return self.config[key]
     
     def _set_seed(self, base_seed: int, *additional_components):
         """Set the RNG seed based on base seed and additional components."""
@@ -4248,6 +4439,9 @@ class GenerationPipeline:
         Returns:
             The processed generation data
         """
+        if not self.layers:
+            raise RuntimeError(f"❌ Pipeline '{self.name}' has no layers configured - cannot generate terrain")
+
         for layer in self.layers:
             data = layer.process(data, bounds)
             if layer.name not in data.processed_layers:
@@ -4595,7 +4789,7 @@ class TierManager:
         self.local_tier: Optional[GenerationPipeline] = None   # Future
         
         # Configuration tracking
-        self._world_tier_config: Optional[Dict[str, Any]] = None
+        self._world_tier_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None
     
     def set_world_tier(self, layer_configs: List[Tuple[str, Dict[str, Any]]]):
         """
@@ -4734,7 +4928,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 # Define Tile class locally to avoid circular imports
 class Tile:
     """Represents a single tile in the world."""
-    def __init__(self, x: int, y: int, tile_type: str = "stone"):
+    def __init__(self, x: int, y: int, tile_type: str = "land"):
         self.x = x
         self.y = y
         self.tile_type = tile_type
@@ -4854,8 +5048,12 @@ class WorldGenerationWorker:
                 if self.requests_processed % 10 == 0:
                     self._send_status_update()
                 
-            except Exception:
-                pass
+            except Exception as e:
+                # Log the error and terminate worker - no silent failures
+                error_msg = f"❌ Worker {self.worker_id} encountered fatal error: {e}"
+                print(error_msg)
+                self.running = False
+                raise RuntimeError(error_msg) from e
     
     def _process_message(self, message: Message):
         """Process a message from the main thread."""
@@ -5005,7 +5203,10 @@ class WorldGenerationWorker:
         # Create generation data for the pipeline
         generation_data = GenerationData(
             seed=self.seed,
-            chunk_size=effective_chunk_size
+            chunk_size=effective_chunk_size,
+            chunks={},
+            processed_layers=[],
+            custom_data={}
         )
 
         # Define bounds for pipeline processing (single chunk)
@@ -5200,18 +5401,18 @@ class WorldManager:
         """Set up the TierManager with configured layers."""
         self.tier_manager = TierManager()
 
-        # Load layer configurations
-        layer_configs = {}
+        # Load layer configurations as list of tuples (required by TierManager)
+        layer_configs = []
         for layer_name in self.config.pipeline_layers:
             if layer_name in self.config.layer_configs:
-                layer_configs[layer_name] = self.config.layer_configs[layer_name]
+                layer_configs.append((layer_name, self.config.layer_configs[layer_name]))
             else:
                 raise RuntimeError(f"❌ Missing configuration for pipeline layer: {layer_name}")
 
         if not layer_configs:
             raise RuntimeError("❌ No pipeline layers configured! Cannot proceed without sophisticated generation algorithms.")
 
-        # Set up world tier with layers
+        # Set up world tier with layers (expects list of tuples)
         self.tier_manager.set_world_tier(layer_configs)
 
         # Verify configuration
@@ -5262,14 +5463,17 @@ class WorldManager:
             # Load chunk tiles into cache
             self._cache_chunk_tiles(chunk_x, chunk_y)
             self.cache_hits += 1
-            return self.tile_cache.get((x, y), Tile(x, y, "stone"))
+            if (x, y) not in self.tile_cache:
+                raise RuntimeError(f"❌ Tile ({x}, {y}) not found in cache after loading chunk ({chunk_x}, {chunk_y})")
+            return self.tile_cache[(x, y)]
 
         # Request chunk if not already loading
         if (chunk_x, chunk_y) not in self.loading_chunks:
-            self._request_chunk_async(chunk_x, chunk_y)
+            from .messages import Priority
+            self._request_chunk_async(chunk_x, chunk_y, Priority.NORMAL)
             self.loading_chunks.add((chunk_x, chunk_y))
 
-        # Return placeholder immediately
+        # Return placeholder immediately (legitimate for async loading)
         self.cache_misses += 1
         return Tile(x, y, "loading")
 
@@ -5278,11 +5482,8 @@ class WorldManager:
         chunk_tiles = self.worker.get_chunk_tiles(chunk_x, chunk_y)
         self.tile_cache.update(chunk_tiles)
 
-    def _request_chunk_async(self, chunk_x: int, chunk_y: int, priority=None):
+    def _request_chunk_async(self, chunk_x: int, chunk_y: int, priority):
         """Request chunk generation asynchronously"""
-        if priority is None:
-            from .messages import Priority
-            priority = Priority.NORMAL
         self.worker.request_chunk(chunk_x, chunk_y, priority=priority)
         self.chunks_requested += 1
 
@@ -5449,7 +5650,9 @@ World Tier Pipeline
 Manages the world-scale generation layers.
 """
 
-from typing import Optional
+from typing import List, Tuple, Dict, Any
+
+from src.world.layers.add_islands.layer import IslandsLayer
 from .pipeline import GenerationPipeline
 from .layers.lands_and_seas import LandsAndSeasLayer
 from .layers.zoom import ZoomLayer
@@ -5460,35 +5663,9 @@ class WorldTier:
     Factory for creating world tier pipelines with configured layers.
     """
     
-    @staticmethod
-    def create_default_pipeline(config: Optional[dict] = None) -> GenerationPipeline:
-        """
-        Create a default world tier pipeline.
 
-        Args:
-            config: Configuration dictionary for layers
-
-        Returns:
-            Configured world tier pipeline
-        """
-        config = config or {}
-        pipeline = GenerationPipeline("world_tier")
-        
-        # Add lands_and_seas layer (our existing chunk-based land/water generation)
-        lands_seas_config = config.get('lands_and_seas', {})
-        lands_seas_layer = LandsAndSeasLayer(lands_seas_config)
-        pipeline.add_layer(lands_seas_layer)
-        
-        # Future layers will be added here:
-        # - climate layer
-        # - continental_drift layer  
-        # - major_features layer
-        # etc.
-        
-        return pipeline
-    
     @staticmethod
-    def create_custom_pipeline(layer_configs: list) -> GenerationPipeline:
+    def create_custom_pipeline(layer_configs: List[Tuple[str, Dict[str, Any]]]) -> GenerationPipeline:
         """
         Create a custom world tier pipeline from layer configurations.
 
@@ -5500,12 +5677,15 @@ class WorldTier:
         """
         pipeline = GenerationPipeline("world_tier")
 
-        for layer_name, config in layer_configs.items():
+        for layer_name, config in layer_configs:
             if layer_name == "lands_and_seas":
                 layer = LandsAndSeasLayer(config)
                 pipeline.add_layer(layer)
             elif layer_name == "zoom":
                 layer = ZoomLayer(config)
+                pipeline.add_layer(layer)
+            elif layer_name == "islands":
+                layer = IslandsLayer(config)
                 pipeline.add_layer(layer)
             # Add other layer types here as they're implemented
             else:
@@ -5561,28 +5741,24 @@ class LandsAndSeasLayer(GenerationLayer):
     Other layers will build upon this basic land/water distribution.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__("lands_and_seas", config)
-        
-        # Load configuration from TOML file if no config provided
-        if not config:
-            self.config = self._load_config()
-        
-        # Extract configuration values
-        self.land_ratio = self._get_config_value('land_ratio', 4)
-        self.algorithm = self._get_config_value('algorithm', 'cellular_automata')
 
-        # Algorithm-specific configuration
+        # Extract configuration values - all required
+        self.land_ratio = self._get_config_value('land_ratio')
+        self.algorithm = self._get_config_value('algorithm')
+
+        # Algorithm-specific configuration - all required
         if self.algorithm == 'perlin_noise':
-            self.scale = self._get_config_value('perlin_noise.scale', 0.1)
-            self.octaves = self._get_config_value('perlin_noise.octaves', 4)
-            self.persistence = self._get_config_value('perlin_noise.persistence', 0.5)
-            self.lacunarity = self._get_config_value('perlin_noise.lacunarity', 2.0)
+            self.scale = self._get_config_value('perlin_noise.scale')
+            self.octaves = self._get_config_value('perlin_noise.octaves')
+            self.persistence = self._get_config_value('perlin_noise.persistence')
+            self.lacunarity = self._get_config_value('perlin_noise.lacunarity')
         elif self.algorithm == 'cellular_automata':
-            self.initial_land_probability = self._get_config_value('cellular_automata.initial_land_probability', 0.4)
-            self.iterations = self._get_config_value('cellular_automata.iterations', 5)
-            self.birth_limit = self._get_config_value('cellular_automata.birth_limit', 4)
-            self.death_limit = self._get_config_value('cellular_automata.death_limit', 3)
+            self.initial_land_probability = self._get_config_value('cellular_automata.initial_land_probability')
+            self.iterations = self._get_config_value('cellular_automata.iterations')
+            self.birth_limit = self._get_config_value('cellular_automata.birth_limit')
+            self.death_limit = self._get_config_value('cellular_automata.death_limit')
 
         # Validate configuration
         if not (1 <= self.land_ratio <= 10):
@@ -5591,20 +5767,7 @@ class LandsAndSeasLayer(GenerationLayer):
         if self.algorithm not in ['random_chunks', 'perlin_noise', 'cellular_automata']:
             raise ValueError(f"Unsupported algorithm: {self.algorithm}")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from the layer's TOML file."""
-        # Look for config in the centralized config directory
-        config_path = os.path.join('config', 'world', 'layers', 'lands_and_seas.toml')
 
-        if not os.path.exists(config_path):
-            return {}
-
-        try:
-            with open(config_path, 'rb') as f:
-                data = tomllib.load(f)
-            return data.get('lands_and_seas', {})
-        except Exception as e:
-            return {}
     
     def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
         """
@@ -5619,7 +5782,7 @@ class LandsAndSeasLayer(GenerationLayer):
         """
         min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
         total_chunks = (max_chunk_x - min_chunk_x + 1) * (max_chunk_y - min_chunk_y + 1)
-        algorithm = self.config.get('algorithm', 'random_chunks')
+        algorithm = self.algorithm
 
 
         min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
@@ -5953,6 +6116,290 @@ if __name__ == '__main__':
     unittest.main()
 ```
 
+## src/world/layers/add_islands/__init__.py
+
+```python
+"""
+Islands Layer
+
+Converts isolated water chunks (completely surrounded by land) into land chunks.
+Creates small islands and fills water gaps within landmasses for more natural terrain.
+"""
+
+from .layer import IslandsLayer
+
+__all__ = ["IslandsLayer"]
+```
+
+## src/world/layers/add_islands/layer.py
+
+```python
+#!/usr/bin/env python3
+"""
+Islands Generation Layer
+
+Converts isolated water chunks (completely surrounded by land) into land chunks.
+This creates small islands and fills in water gaps within landmasses for more
+natural-looking terrain.
+"""
+
+import os
+from typing import Dict, Any, Tuple, Set
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+from ...pipeline import GenerationLayer, GenerationData
+
+
+class IslandsLayer(GenerationLayer):
+    """
+    Layer that converts isolated water chunks into small islands.
+    
+    This layer identifies water chunks that are completely surrounded by land
+    and converts them into land chunks, creating small islands and filling
+    water gaps within landmasses for more natural terrain.
+    """
+    
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__("islands", config)
+
+        # Extract configuration values - all required
+        self.conversion_probability = self._get_config_value('conversion_probability')
+        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood')
+        self.min_land_neighbors = self._get_config_value('min_land_neighbors')
+        self.require_all_neighbors = self._get_config_value('require_all_neighbors')
+        
+        # Validate configuration
+        if not (0.0 <= self.conversion_probability <= 1.0):
+            raise ValueError(f"conversion_probability must be 0.0-1.0, got {self.conversion_probability}")
+        
+        if self.use_moore_neighborhood:
+            max_neighbors = 8
+        else:
+            max_neighbors = 4
+            
+        if self.min_land_neighbors > max_neighbors:
+            raise ValueError(f"min_land_neighbors ({self.min_land_neighbors}) cannot be greater than maximum possible neighbors ({max_neighbors})")
+    
+
+    
+    def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
+        """
+        Process chunks to convert isolated water into islands.
+
+        Args:
+            data: Generation data to process
+            bounds: (min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y)
+
+        Returns:
+            Data with isolated water chunks converted to land
+        """
+        min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
+        
+        # Find all water chunks that are candidates for island conversion
+        island_candidates = self._find_island_candidates(data, bounds)
+        
+        # Convert candidates to islands based on probability
+        conversions_made = 0
+        for chunk_x, chunk_y in island_candidates:
+            # Set deterministic seed for this chunk
+            self._set_seed(data.seed, chunk_x, chunk_y, "island_conversion")
+            
+            # Apply conversion probability
+            if self.rng.random() < self.conversion_probability:
+                data.set_chunk_property(chunk_x, chunk_y, 'land_type', 'land')
+                conversions_made += 1
+        
+        # Store island layer metadata
+        data.custom_data['islands_layer'] = {
+            'candidates_found': len(island_candidates),
+            'conversions_made': conversions_made,
+            'conversion_rate': conversions_made / max(1, len(island_candidates))
+        }
+        
+        # Mark this layer as processed
+        if self.name not in data.processed_layers:
+            data.processed_layers.append(self.name)
+        
+        return data
+    
+    def _find_island_candidates(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> Set[Tuple[int, int]]:
+        """
+        Find all water chunks that are completely surrounded by land.
+
+        Args:
+            data: Generation data to analyze
+            bounds: (min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y)
+
+        Returns:
+            Set of (chunk_x, chunk_y) coordinates that are island candidates
+        """
+        min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
+        candidates = set()
+        
+        # Check each water chunk to see if it's surrounded by land
+        for chunk_x in range(min_chunk_x, max_chunk_x + 1):
+            for chunk_y in range(min_chunk_y, max_chunk_y + 1):
+                chunk_key = (chunk_x, chunk_y)
+                
+                # Skip if chunk doesn't exist
+                if chunk_key not in data.chunks:
+                    continue
+                
+                # Only consider water chunks
+                current_land_type = data.get_chunk_property(chunk_x, chunk_y, 'land_type')
+                if current_land_type != 'water':
+                    continue
+                
+                # Check if this water chunk is surrounded by land
+                if self._is_surrounded_by_land(data, chunk_x, chunk_y, bounds):
+                    candidates.add((chunk_x, chunk_y))
+        
+        return candidates
+    
+    def _is_surrounded_by_land(self, data: GenerationData, chunk_x: int, chunk_y: int, 
+                              bounds: Tuple[int, int, int, int]) -> bool:
+        """
+        Check if a water chunk is completely surrounded by land.
+
+        Args:
+            data: Generation data to analyze
+            chunk_x: X coordinate of chunk to check
+            chunk_y: Y coordinate of chunk to check
+            bounds: World bounds to respect
+
+        Returns:
+            True if the chunk is surrounded by land
+        """
+        min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
+        
+        # Define neighborhood based on configuration
+        if self.use_moore_neighborhood:
+            # 8-neighbor Moore neighborhood (includes diagonals)
+            offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        else:
+            # 4-neighbor Von Neumann neighborhood (orthogonal only)
+            offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        land_neighbors = 0
+        valid_neighbors = 0
+        
+        for dx, dy in offsets:
+            neighbor_x = chunk_x + dx
+            neighbor_y = chunk_y + dy
+            
+            # Skip neighbors outside bounds
+            if (neighbor_x < min_chunk_x or neighbor_x > max_chunk_x or
+                neighbor_y < min_chunk_y or neighbor_y > max_chunk_y):
+                if not self.require_all_neighbors:
+                    # If we don't require all neighbors to exist, skip out-of-bounds
+                    continue
+                else:
+                    # If we require all neighbors, treat out-of-bounds as non-land
+                    valid_neighbors += 1
+                    continue
+            
+            valid_neighbors += 1
+            neighbor_key = (neighbor_x, neighbor_y)
+            
+            # Check if neighbor chunk exists and is land
+            if neighbor_key in data.chunks:
+                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type')
+                if neighbor_land_type == 'land':
+                    land_neighbors += 1
+            # If neighbor doesn't exist, treat as water (not land)
+        
+        # Determine if surrounded by land based on configuration
+        if self.require_all_neighbors and valid_neighbors < len(offsets):
+            # If we require all neighbors but some are missing/out-of-bounds, not surrounded
+            return False
+        
+        # Check if we have enough land neighbors
+        if self.require_all_neighbors:
+            # All existing neighbors must be land
+            return land_neighbors == valid_neighbors and valid_neighbors > 0
+        else:
+            # Just need minimum number of land neighbors
+            return land_neighbors >= self.min_land_neighbors
+    
+    def _count_land_neighbors(self, data: GenerationData, chunk_x: int, chunk_y: int,
+                             bounds: Tuple[int, int, int, int]) -> Tuple[int, int]:
+        """
+        Count land neighbors around a chunk.
+
+        Args:
+            data: Generation data to analyze
+            chunk_x: X coordinate of chunk to check
+            chunk_y: Y coordinate of chunk to check
+            bounds: World bounds to respect
+
+        Returns:
+            Tuple of (land_neighbors, total_valid_neighbors)
+        """
+        min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
+        
+        if self.use_moore_neighborhood:
+            offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        else:
+            offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        land_neighbors = 0
+        valid_neighbors = 0
+        
+        for dx, dy in offsets:
+            neighbor_x = chunk_x + dx
+            neighbor_y = chunk_y + dy
+            
+            # Skip neighbors outside bounds
+            if (neighbor_x < min_chunk_x or neighbor_x > max_chunk_x or
+                neighbor_y < min_chunk_y or neighbor_y > max_chunk_y):
+                continue
+            
+            valid_neighbors += 1
+            neighbor_key = (neighbor_x, neighbor_y)
+            
+            if neighbor_key in data.chunks:
+                neighbor_land_type = data.get_chunk_property(neighbor_x, neighbor_y, 'land_type')
+                if neighbor_land_type == 'land':
+                    land_neighbors += 1
+        
+        return land_neighbors, valid_neighbors
+    
+    def get_config_summary(self) -> Dict[str, Any]:
+        """Get a summary of the current configuration."""
+        return {
+            'layer_name': self.name,
+            'conversion_probability': self.conversion_probability,
+            'use_moore_neighborhood': self.use_moore_neighborhood,
+            'min_land_neighbors': self.min_land_neighbors,
+            'require_all_neighbors': self.require_all_neighbors,
+            'max_possible_neighbors': 8 if self.use_moore_neighborhood else 4
+        }
+    
+    def get_layer_statistics(self, data: GenerationData) -> Dict[str, Any]:
+        """
+        Get statistics about island layer processing.
+
+        Args:
+            data: Generation data that was processed
+
+        Returns:
+            Dictionary of layer statistics
+        """
+        island_data = data.custom_data.get('islands_layer', {})
+        
+        return {
+            'layer_name': self.name,
+            'candidates_found': island_data.get('candidates_found', 0),
+            'conversions_made': island_data.get('conversions_made', 0),
+            'conversion_rate': island_data.get('conversion_rate', 0.0),
+            'was_processed': self.name in data.processed_layers
+        }
+```
+
 ## src/world/layers/zoom/__init__.py
 
 ```python
@@ -6003,44 +6450,40 @@ class ZoomLayer(GenerationLayer):
     while maintaining the overall geographic structure from previous layers.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__("zoom", config)
-        
-        # Load configuration from TOML file if no config provided
-        if not config:
-            self.config = self._load_config()
-        
-        # Extract configuration values
-        self.subdivision_factor = self._get_config_value('subdivision_factor', 2)
-        self.land_expansion_threshold = self._get_config_value('land_expansion_threshold', 3)
-        self.erosion_probability = self._get_config_value('erosion_probability', 0.25)
-        self.iterations = self._get_config_value('iterations', 6)
 
-        # Multi-pass configuration
-        self.use_multi_pass = self._get_config_value('use_multi_pass', True)
-        self.pass_1_iterations = self._get_config_value('pass_1_iterations', 3)
-        self.pass_1_expansion_threshold = self._get_config_value('pass_1_expansion_threshold', 2)
-        self.pass_1_erosion_probability = self._get_config_value('pass_1_erosion_probability', 0.1)
-        self.pass_2_iterations = self._get_config_value('pass_2_iterations', 3)
-        self.pass_2_expansion_threshold = self._get_config_value('pass_2_expansion_threshold', 4)
-        self.pass_2_erosion_probability = self._get_config_value('pass_2_erosion_probability', 0.3)
+        # Extract configuration values - all required
+        self.subdivision_factor = self._get_config_value('subdivision_factor')
+        self.land_expansion_threshold = self._get_config_value('land_expansion_threshold')
+        self.erosion_probability = self._get_config_value('erosion_probability')
+        self.iterations = self._get_config_value('iterations')
 
-        # Protection and advanced settings
-        self.protect_interior = self._get_config_value('protect_interior', False)
-        self.interior_threshold = self._get_config_value('interior_threshold', 8)
-        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood', True)
-        self.preserve_islands = self._get_config_value('preserve_islands', True)
-        self.min_island_size = self._get_config_value('min_island_size', 1)
+        # Multi-pass configuration - all required
+        self.use_multi_pass = self._get_config_value('use_multi_pass')
+        self.pass_1_iterations = self._get_config_value('pass_1_iterations')
+        self.pass_1_expansion_threshold = self._get_config_value('pass_1_expansion_threshold')
+        self.pass_1_erosion_probability = self._get_config_value('pass_1_erosion_probability')
+        self.pass_2_iterations = self._get_config_value('pass_2_iterations')
+        self.pass_2_expansion_threshold = self._get_config_value('pass_2_expansion_threshold')
+        self.pass_2_erosion_probability = self._get_config_value('pass_2_erosion_probability')
 
-        # Enhanced randomization
-        self.add_noise = self._get_config_value('add_noise', True)
-        self.noise_probability = self._get_config_value('noise_probability', 0.15)
-        self.edge_noise_boost = self._get_config_value('edge_noise_boost', True)
-        self.edge_noise_probability = self._get_config_value('edge_noise_probability', 0.25)
+        # Protection and advanced settings - all required
+        self.protect_interior = self._get_config_value('protect_interior')
+        self.interior_threshold = self._get_config_value('interior_threshold')
+        self.use_moore_neighborhood = self._get_config_value('use_moore_neighborhood')
+        self.preserve_islands = self._get_config_value('preserve_islands')
+        self.min_island_size = self._get_config_value('min_island_size')
 
-        # Fractal enhancement
-        self.fractal_perturbation = self._get_config_value('fractal_perturbation', True)
-        self.perturbation_strength = self._get_config_value('perturbation_strength', 0.3)
+        # Enhanced randomization - all required
+        self.add_noise = self._get_config_value('add_noise')
+        self.noise_probability = self._get_config_value('noise_probability')
+        self.edge_noise_boost = self._get_config_value('edge_noise_boost')
+        self.edge_noise_probability = self._get_config_value('edge_noise_probability')
+
+        # Fractal enhancement - all required
+        self.fractal_perturbation = self._get_config_value('fractal_perturbation')
+        self.perturbation_strength = self._get_config_value('perturbation_strength')
         
         # Validate configuration
         if self.subdivision_factor < 2:
@@ -6050,20 +6493,7 @@ class ZoomLayer(GenerationLayer):
         if not (0.0 <= self.noise_probability <= 1.0):
             raise ValueError(f"noise_probability must be 0.0-1.0, got {self.noise_probability}")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from the layer's TOML file."""
-        # Look for config in the centralized config directory
-        config_path = os.path.join('config', 'world', 'layers', 'zoom.toml')
 
-        if not os.path.exists(config_path):
-            return {}
-
-        try:
-            with open(config_path, 'rb') as f:
-                data = tomllib.load(f)
-            return data.get('zoom', {})
-        except Exception as e:
-            return {}
     
     def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
         """
@@ -7640,5 +8070,5 @@ if __name__ == "__main__":
 ---
 
 **Export Summary:**
-- Files processed: 44
+- Files processed: 50
 - Files skipped: 0

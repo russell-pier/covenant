@@ -27,28 +27,24 @@ class LandsAndSeasLayer(GenerationLayer):
     Other layers will build upon this basic land/water distribution.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__("lands_and_seas", config)
-        
-        # Load configuration from TOML file if no config provided
-        if not config:
-            self.config = self._load_config()
-        
-        # Extract configuration values
-        self.land_ratio = self._get_config_value('land_ratio', 4)
-        self.algorithm = self._get_config_value('algorithm', 'cellular_automata')
 
-        # Algorithm-specific configuration
+        # Extract configuration values - all required
+        self.land_ratio = self._get_config_value('land_ratio')
+        self.algorithm = self._get_config_value('algorithm')
+
+        # Algorithm-specific configuration - all required
         if self.algorithm == 'perlin_noise':
-            self.scale = self._get_config_value('perlin_noise.scale', 0.1)
-            self.octaves = self._get_config_value('perlin_noise.octaves', 4)
-            self.persistence = self._get_config_value('perlin_noise.persistence', 0.5)
-            self.lacunarity = self._get_config_value('perlin_noise.lacunarity', 2.0)
+            self.scale = self._get_config_value('perlin_noise.scale')
+            self.octaves = self._get_config_value('perlin_noise.octaves')
+            self.persistence = self._get_config_value('perlin_noise.persistence')
+            self.lacunarity = self._get_config_value('perlin_noise.lacunarity')
         elif self.algorithm == 'cellular_automata':
-            self.initial_land_probability = self._get_config_value('cellular_automata.initial_land_probability', 0.4)
-            self.iterations = self._get_config_value('cellular_automata.iterations', 5)
-            self.birth_limit = self._get_config_value('cellular_automata.birth_limit', 4)
-            self.death_limit = self._get_config_value('cellular_automata.death_limit', 3)
+            self.initial_land_probability = self._get_config_value('cellular_automata.initial_land_probability')
+            self.iterations = self._get_config_value('cellular_automata.iterations')
+            self.birth_limit = self._get_config_value('cellular_automata.birth_limit')
+            self.death_limit = self._get_config_value('cellular_automata.death_limit')
 
         # Validate configuration
         if not (1 <= self.land_ratio <= 10):
@@ -57,20 +53,7 @@ class LandsAndSeasLayer(GenerationLayer):
         if self.algorithm not in ['random_chunks', 'perlin_noise', 'cellular_automata']:
             raise ValueError(f"Unsupported algorithm: {self.algorithm}")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from the layer's TOML file."""
-        # Look for config in the centralized config directory
-        config_path = os.path.join('config', 'world', 'layers', 'lands_and_seas.toml')
 
-        if not os.path.exists(config_path):
-            return {}
-
-        try:
-            with open(config_path, 'rb') as f:
-                data = tomllib.load(f)
-            return data.get('lands_and_seas', {})
-        except Exception as e:
-            return {}
     
     def process(self, data: GenerationData, bounds: Tuple[int, int, int, int]) -> GenerationData:
         """
@@ -85,7 +68,7 @@ class LandsAndSeasLayer(GenerationLayer):
         """
         min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
         total_chunks = (max_chunk_x - min_chunk_x + 1) * (max_chunk_y - min_chunk_y + 1)
-        algorithm = self.config.get('algorithm', 'random_chunks')
+        algorithm = self.algorithm
 
 
         min_chunk_x, min_chunk_y, max_chunk_x, max_chunk_y = bounds
