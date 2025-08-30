@@ -14,15 +14,21 @@ import random
 @dataclass
 class GenerationData:
     """
-    Standardized data structure passed between generation layers.
-    
-    This ensures all layers can work together regardless of order.
+    Standardized data structure for fixed-chunk multi-scale sampling system.
+
+    All chunks are always the same size (configurable, typically 16x16).
+    Layers sample at different scales within these fixed chunks.
     """
     # Core world info
     seed: int
-    chunk_size: int
-    
-    # Chunk data - maps (chunk_x, chunk_y) to chunk data
+    chunk_size: int  # Fixed size for all chunks (e.g., 16)
+
+    # Multi-scale sampling results
+    continental_samples: Dict[Tuple[int, int], Any]  # Region coordinates (4x4 chunks)
+    regional_samples: Dict[Tuple[int, int], Any]     # Chunk coordinates
+    local_samples: Dict[Tuple[int, int], Any]        # Sub-chunk samples
+
+    # Final chunk data - maps (chunk_x, chunk_y) to chunk data
     chunks: Dict[Tuple[int, int], Dict[str, Any]]
 
     # Layer metadata - tracks which layers have processed this data
@@ -30,7 +36,22 @@ class GenerationData:
 
     # Custom data - layers can store arbitrary data here
     custom_data: Dict[str, Any]
-    
+
+    def __post_init__(self):
+        """Initialize empty collections if not provided."""
+        if not hasattr(self, 'continental_samples') or self.continental_samples is None:
+            self.continental_samples = {}
+        if not hasattr(self, 'regional_samples') or self.regional_samples is None:
+            self.regional_samples = {}
+        if not hasattr(self, 'local_samples') or self.local_samples is None:
+            self.local_samples = {}
+        if not hasattr(self, 'chunks') or self.chunks is None:
+            self.chunks = {}
+        if not hasattr(self, 'processed_layers') or self.processed_layers is None:
+            self.processed_layers = []
+        if not hasattr(self, 'custom_data') or self.custom_data is None:
+            self.custom_data = {}
+
     def get_chunk(self, chunk_x: int, chunk_y: int) -> Dict[str, Any]:
         """Get chunk data - fails if chunk doesn't exist."""
         chunk_key = (chunk_x, chunk_y)
@@ -57,6 +78,35 @@ class GenerationData:
         if property_name not in chunk:
             raise KeyError(f"❌ Property '{property_name}' not found in chunk ({chunk_x}, {chunk_y}). Available properties: {list(chunk.keys())}")
         return chunk[property_name]
+
+    # Multi-scale sampling helper methods
+    def set_continental_sample(self, region_x: int, region_y: int, data: Any):
+        """Set continental-level sample data for a region."""
+        self.continental_samples[(region_x, region_y)] = data
+
+    def get_continental_sample(self, region_x: int, region_y: int) -> Any:
+        """Get continental-level sample data for a region."""
+        return self.continental_samples.get((region_x, region_y))
+
+    def set_regional_sample(self, chunk_x: int, chunk_y: int, data: Any):
+        """Set regional-level sample data for a chunk."""
+        self.regional_samples[(chunk_x, chunk_y)] = data
+
+    def get_regional_sample(self, chunk_x: int, chunk_y: int) -> Any:
+        """Get regional-level sample data for a chunk."""
+        return self.regional_samples.get((chunk_x, chunk_y))
+
+    def set_local_sample(self, sample_x: int, sample_y: int, data: Any):
+        """Set local-level sample data for sub-chunk sampling."""
+        self.local_samples[(sample_x, sample_y)] = data
+
+    def get_local_sample(self, sample_x: int, sample_y: int) -> Any:
+        """Get local-level sample data for sub-chunk sampling."""
+        return self.local_samples.get((sample_x, sample_y))
+
+    def get_region_for_chunk(self, chunk_x: int, chunk_y: int, region_size: int = 4) -> Tuple[int, int]:
+        """Get the continental region coordinates for a given chunk."""
+        return chunk_x // region_size, chunk_y // region_size
 
 
 class GenerationLayer(ABC):

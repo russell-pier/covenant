@@ -1,0 +1,20 @@
+# Regional Layer Configuration
+# Operates on individual chunks to create land/water boundaries within continental regions
+
+# Noise sampling parameters
+noise_scale = 0.1  # Scale factor for noise sampling (smaller = larger features)
+
+# Continental influence parameters
+land_bias_from_continental = 0.7  # How much continental designation influences regional sampling (0.0-1.0)
+
+# Coastal variation parameters
+coastal_variation = 0.3  # Amount of variation in coastal regions (0.0-1.0)
+
+# Advanced parameters
+use_fractal_noise = false  # Whether to use multiple octaves of noise
+fractal_octaves = 2  # Number of noise octaves if fractal is enabled
+fractal_persistence = 0.6  # Persistence between octaves
+
+# Boundary smoothing
+smooth_boundaries = true  # Whether to smooth land/water boundaries
+smoothing_iterations = 1  # Number of smoothing passes

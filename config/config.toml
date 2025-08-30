@@ -13,23 +13,20 @@ center_y = 0
 radius = 50
 generator_type = "pipeline"  # Pipeline-based world generation
 seed = 123456  # Random seed for chunk generation
-chunk_size = 64  # Size of each chunk in tiles for lands_and_seas layer
+chunk_size = 16  # Fixed size for all chunks (both generation and rendering)
 
 # Infinite world settings
 render_distance = 2  # Buffer distance in chunks beyond screen edges (for smooth movement)
 chunk_cache_limit = 100  # Maximum number of chunks to keep in memory
 chunk_unload_distance = 5  # Unload chunks beyond this distance from screen viewport
 
-# World generation pipeline configuration
-# lands_and_seas: 64x64 → zoom: 32x32 → islands: convert isolated water to land
+# Multi-scale sampling pipeline configuration
+# Fixed 16x16 chunks with multi-scale sampling within chunks
 pipeline_layers = [
-    "lands_and_seas",
-    "zoom", 
-    "islands",
-    "zoom",
-    "islands",
-    "zoom",
-    "zoom"
+    "continental",
+    "regional",
+    "local",
+    "tiles"
 ]
 
 [camera]
@@ -40,43 +37,31 @@ initial_y = 0
 move_speed = 1  # Tiles per key press
 fast_move_speed = 5  # Tiles per key press when holding Shift
 
-# Layer-specific configurations
-[world.lands_and_seas]
-land_ratio = 3  # Balanced land ratio (3:10 = 30% land, 70% water)
-algorithm = "random_chunks"
+# Multi-scale sampling layer configurations
+[world.continental]
+region_size = 4  # 4x4 chunks per continental region (64x64 tiles)
+noise_scale = 0.01
+continent_threshold = 0.3
+land_ratio = 0.3  # 30% of regions should be continental land
 
-[world.zoom]
-subdivision_factor = 2
-land_expansion_threshold = 6  # Much higher threshold - land needs many neighbors to expand
+[world.regional]
+noise_scale = 0.1
+land_bias_from_continental = 0.7  # How much continental designation influences regional sampling
+coastal_variation = 0.3  # Amount of variation in coastal regions
+
+[world.local]
+sampling_resolution = 8  # 8x8 samples within each 16x16 chunk
+noise_scale = 0.5
+coastal_detail_iterations = 3
 erosion_probability = 0.1
-iterations = 2  # Fewer iterations to prevent runaway growth
-use_multi_pass = false  # Disable multi-pass for simpler, controlled expansion
-pass_1_iterations = 3
-pass_1_expansion_threshold = 2
-pass_1_erosion_probability = 0.1
-pass_2_iterations = 3
-pass_2_expansion_threshold = 4
-pass_2_erosion_probability = 0.3
-protect_interior = false
-interior_threshold = 8
-use_moore_neighborhood = true
-preserve_islands = true
-min_island_size = 1
-fractal_perturbation = false  # Disable for cleaner testing
-perturbation_strength = 0.3
-edge_noise_boost = false
-add_noise = false
-noise_probability = 0.0
-edge_noise_probability = 0.25
+expansion_probability = 0.2
 
-[world.islands]
-# Convert 80% of eligible isolated water chunks to islands
-conversion_probability = 0.8
-# Use 8-neighbor Moore neighborhood for comprehensive checking
-use_moore_neighborhood = true
-# Require all 8 neighbors to be land for conversion
-min_land_neighbors = 8
-require_all_neighbors = true
+[world.tiles]
+# Final tile placement rules
+default_land_tile = "grass"
+default_water_tile = "water"
+coastal_tile = "sand"
+deep_water_tile = "deep_water"
 
 [debug]
 show_debug_on_startup = true
