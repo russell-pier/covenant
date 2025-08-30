@@ -351,26 +351,27 @@ class WorldGenerationWorker:
             worker_id=self.worker_id,
             chunks_in_queue=len(self.active_requests),
             chunks_generated=self.chunks_generated,
-            cache_size=len(self.render_chunk_cache)
+            cache_size=len(self.chunk_cache)
         )
         self.message_bus.send_to_main(status_msg, block=False)
     
     def is_chunk_ready(self, chunk_x: int, chunk_y: int) -> bool:
         """Check if a chunk is ready (cached)."""
-        return (chunk_x, chunk_y) in self.render_chunk_cache
+        return (chunk_x, chunk_y) in self.chunk_cache
 
     def get_ready_chunks(self) -> set:
         """Get set of ready chunk coordinates."""
-        return set(self.render_chunk_cache.keys())
+        return set(self.chunk_cache.keys())
 
     def get_chunk_tiles(self, chunk_x: int, chunk_y: int) -> Dict[Tuple[int, int], Tile]:
         """Get all tiles in a chunk."""
         chunk_key = (chunk_x, chunk_y)
-        if chunk_key in self.render_chunk_cache:
-            render_chunk = self.render_chunk_cache[chunk_key]
-            # Convert aggregated tiles to Tile objects
+        if chunk_key in self.chunk_cache:
+            chunk_data = self.chunk_cache[chunk_key]
+            # Convert chunk tiles to Tile objects
             tiles = {}
-            for (world_x, world_y), tile_type in render_chunk.aggregated_tiles.items():
+            for (world_x, world_y), tile_data in chunk_data['tiles'].items():
+                tile_type = tile_data['tile_type'] if isinstance(tile_data, dict) else tile_data
                 tiles[(world_x, world_y)] = Tile(world_x, world_y, tile_type)
             return tiles
         return {}
@@ -402,7 +403,7 @@ class WorldGenerationWorker:
             'chunks_generated': self.chunks_generated,
             'requests_processed': self.requests_processed,
             'requests_cancelled': self.requests_cancelled,
-            'cache_size': len(self.render_chunk_cache),
+            'cache_size': len(self.chunk_cache),
             'active_requests': len(self.active_requests),
             'avg_generation_time': avg_generation_time,
             'total_generation_time': self.total_generation_time
