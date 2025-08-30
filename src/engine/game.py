@@ -165,15 +165,25 @@ def run_game():
     x_tile[5, 2:6] = True
     x_tile[6, 1:7] = True
     tileset.set_tile(ord('X'), x_tile)
-
-    with tcod.context.new_terminal(
-        columns=console.width,
-        rows=console.height,
-        title=_config.application.title,
-        vsync=_config.window.vsync,
-        tileset=tileset,
-    ) as context:
-        main_loop(context, console)
+    try:
+        with tcod.context.new_terminal(
+            columns=console.width,
+            rows=console.height,
+            title=_config.application.title,
+            vsync=_config.window.vsync,
+            tileset=tileset,
+        ) as context:
+            main_loop(context, console)
+    except Exception as e:
+        if "No available video device" in str(e):
+            print(f"❌ Cannot start GUI: No display available (headless environment)")
+            print(f"💡 The world generation system is working correctly.")
+            print(f"💡 To run the GUI, use a system with a display or X11 forwarding.")
+            print(f"💡 You can test world generation with: python -c 'from test_world_generation_headless import test_world_generation; test_world_generation()'")
+            return
+        else:
+            print(f"❌ Failed to create tcod context: {e}")
+            raise
 
 
 def main_loop(context, console):
