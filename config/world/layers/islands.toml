@@ -1,0 +1,38 @@
+# Islands Layer Configuration
+# Converts isolated water chunks (completely surrounded by land) into land chunks.
+# This creates small islands and fills in water gaps within landmasses for more
+# natural-looking terrain.
+
+[islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+# If false, uses 4-neighbor Von Neumann neighborhood (orthogonal only)
+use_moore_neighborhood = true
+
+# Minimum number of land neighbors required for conversion
+# For Moore neighborhood (8-neighbor): max is 8
+# For Von Neumann neighborhood (4-neighbor): max is 4
+min_land_neighbors = 8
+
+# Whether to require all neighbors to be present (not out-of-bounds)
+# If true, chunks near world edges are less likely to be converted
+require_all_neighbors = true
+
+# Alternative configurations you can try:
+
+# Conservative islands (fewer, only perfect enclosures)
+# conversion_probability = 0.6
+# min_land_neighbors = 8
+# require_all_neighbors = true
+
+# Aggressive island creation (more islands, looser requirements)
+# conversion_probability = 1.0
+# min_land_neighbors = 6
+# require_all_neighbors = false
+
+# Coastal bay filling (fill small water pockets)
+# conversion_probability = 0.9
+# min_land_neighbors = 7
+# require_all_neighbors = false

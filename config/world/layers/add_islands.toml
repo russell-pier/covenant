@@ -1,0 +1,62 @@
+# Example update to config/config.toml showing how to use the islands layer
+
+[world]
+center_x = 0
+center_y = 0
+radius = 50
+generator_type = "pipeline"
+seed = 123456
+chunk_size = 64
+
+# World generation pipeline configuration
+# Updated to include the new islands layer at the end
+pipeline_layers = [
+    "lands_and_seas",
+    "zoom", 
+    "islands"  # New islands layer - converts isolated water to land
+]
+
+# Layer-specific configurations
+[world.lands_and_seas]
+land_ratio = 3
+algorithm = "random_chunks"
+
+[world.zoom] 
+subdivision_factor = 2
+land_expansion_threshold = 6
+erosion_probability = 0.1
+iterations = 2
+use_multi_pass = false
+fractal_perturbation = false
+edge_noise_boost = false
+add_noise = false
+noise_probability = 0.0
+
+[world.islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+use_moore_neighborhood = true
+# Require all 8 neighbors to be land for conversion
+min_land_neighbors = 8
+require_all_neighbors = true
+
+# Alternative island configurations you can try:
+
+# Conservative islands (fewer, only perfect enclosures)
+# [world.islands]
+# conversion_probability = 0.6
+# min_land_neighbors = 8
+# require_all_neighbors = true
+
+# Aggressive island creation (more islands, looser requirements)
+# [world.islands] 
+# conversion_probability = 1.0
+# min_land_neighbors = 6
+# require_all_neighbors = false
+
+# Coastal bay filling (fill small water pockets)
+# [world.islands]
+# conversion_probability = 0.9
+# min_land_neighbors = 7
+# require_all_neighbors = false

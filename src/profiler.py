@@ -97,12 +97,11 @@ class PerformanceProfiler:
                   f"{data['recent_avg']*1000:<10.2f}")
         
         # Identify potential bottlenecks
-        print("\n🚨 POTENTIAL BOTTLENECKS:")
         for name, data in sorted_stats[:5]:
             if data['avg_time'] > 0.016:  # > 16ms (60 FPS threshold)
-                print(f"  ⚠️  {name}: {data['avg_time']*1000:.2f}ms avg (>{16}ms)")
+                pass
             elif data['recent_avg'] > 0.010:  # > 10ms recent
-                print(f"  ⚠️  {name}: {data['recent_avg']*1000:.2f}ms recent")
+                pass
     
     def reset(self):
         """Reset all profiling data."""

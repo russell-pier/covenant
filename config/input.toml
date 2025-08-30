@@ -1,0 +1,60 @@
+# Input Configuration for Covenant
+# Defines key bindings for all game actions with primary and alternate keys
+
+[movement]
+# Camera movement controls
+[movement.up]
+primary = "UP"        # Arrow key up
+alternate = "W"       # WASD up
+
+[movement.down]
+primary = "DOWN"      # Arrow key down
+alternate = "S"       # WASD down
+
+[movement.left]
+primary = "LEFT"      # Arrow key left
+alternate = "A"       # WASD left
+
+[movement.right]
+primary = "RIGHT"     # Arrow key right
+alternate = "D"       # WASD right
+
+[game_actions]
+# Core game actions
+[game_actions.regenerate_world]
+primary = "R"
+description = "Regenerate the world"
+
+[game_actions.exit]
+primary = "ESCAPE"
+alternate = "Q"       # Ctrl+Q (modifier handled separately)
+description = "Exit the game"
+
+[debug_actions]
+# Debug and UI toggles
+[debug_actions.toggle_debug]
+primary = "F1"
+description = "Toggle debug display"
+
+[debug_actions.toggle_coordinates]
+primary = "F2"
+description = "Toggle coordinate display"
+
+[debug_actions.toggle_chunk_debug]
+primary = "F3"
+description = "Toggle chunk debug overlay"
+
+[debug_actions.toggle_fps]
+primary = "F4"
+description = "Toggle FPS display"
+
+[modifiers]
+# Modifier key behaviors
+fast_movement = "SHIFT"    # Hold for fast movement
+exit_modifier = "CTRL"     # Ctrl+Q to exit
+
+[settings]
+# Input system settings
+movement_throttle = 0.016  # Seconds between movement inputs (60 FPS)
+repeat_delay = 0.1         # Delay before key repeat starts
+repeat_rate = 0.05         # Time between key repeats

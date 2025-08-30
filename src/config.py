@@ -105,26 +105,22 @@ class GameConfig:
 class ConfigLoader:
     """Loads and manages game configuration."""
     
-    def __init__(self, config_file: str = "config.toml"):
+    def __init__(self, config_file: str = "config/config.toml"):
         self.config_file = config_file
         self.config = self.load_config()
     
     def load_config(self) -> GameConfig:
         """Load configuration from TOML file with fallback to defaults."""
         if not os.path.exists(self.config_file):
-            print(f"Warning: Config file '{self.config_file}' not found. Using defaults.")
             return self._create_default_config()
-        
+
         try:
             with open(self.config_file, 'rb') as f:
                 config_data = tomllib.load(f)
-            
-            print(f"Loaded configuration from {self.config_file}")
+
             return self._parse_config(config_data)
-            
-        except Exception as e:
-            print(f"Error loading config from '{self.config_file}': {e}")
-            print("Using default configuration.")
+
+        except Exception:
             return self._create_default_config()
     
     def _parse_config(self, config_data: Dict[str, Any]) -> GameConfig:
@@ -232,7 +228,6 @@ class ConfigLoader:
     
     def reload_config(self):
         """Reload configuration from file."""
-        print("Reloading configuration...")
         self.config = self.load_config()
     
     def get_config(self) -> GameConfig:

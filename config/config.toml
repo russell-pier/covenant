@@ -1,0 +1,85 @@
+[application]
+title = "Covenant"
+version = "0.1.0"
+
+[window]
+initial_width = 80
+initial_height = 50
+vsync = true
+
+[world]
+center_x = 0
+center_y = 0
+radius = 50
+generator_type = "pipeline"  # Pipeline-based world generation
+seed = 123456  # Random seed for chunk generation
+chunk_size = 64  # Size of each chunk in tiles for lands_and_seas layer
+
+# Infinite world settings
+render_distance = 2  # Buffer distance in chunks beyond screen edges (for smooth movement)
+chunk_cache_limit = 100  # Maximum number of chunks to keep in memory
+chunk_unload_distance = 5  # Unload chunks beyond this distance from screen viewport
+
+# World generation pipeline configuration
+# lands_and_seas: 64x64 → zoom: 32x32 → islands: convert isolated water to land
+pipeline_layers = [
+    "lands_and_seas",
+    "zoom",
+    "islands",
+    "zoom"
+]
+
+[camera]
+# Initial camera position (world coordinates)
+initial_x = 0
+initial_y = 0
+# Movement settings
+move_speed = 1  # Tiles per key press
+fast_move_speed = 5  # Tiles per key press when holding Shift
+
+# Layer-specific configurations
+[world.lands_and_seas]
+land_ratio = 3  # Balanced land ratio (3:10 = 30% land, 70% water)
+algorithm = "random_chunks"
+
+[world.zoom]
+subdivision_factor = 2
+land_expansion_threshold = 6  # Much higher threshold - land needs many neighbors to expand
+erosion_probability = 0.1
+iterations = 2  # Fewer iterations to prevent runaway growth
+use_multi_pass = false  # Disable multi-pass for simpler, controlled expansion
+fractal_perturbation = false  # Disable for cleaner testing
+edge_noise_boost = false
+add_noise = false
+noise_probability = 0.0
+
+[world.islands]
+# Convert 80% of eligible isolated water chunks to islands
+conversion_probability = 0.8
+# Use 8-neighbor Moore neighborhood for comprehensive checking
+use_moore_neighborhood = true
+# Require all 8 neighbors to be land for conversion
+min_land_neighbors = 8
+require_all_neighbors = true
+
+[debug]
+show_debug_on_startup = true
+show_coordinates_on_startup = true
+show_fps_on_startup = false
+
+[rendering]
+seamless_blocks_enabled = true
+clear_color = [0, 0, 0]  # Black background
+
+[ui]
+# UI panel colors
+panel_background = [32, 32, 48]  # Dark blue-gray
+border_color = [128, 128, 160]   # Light blue-gray
+info_color = [255, 255, 255]     # White
+warning_color = [255, 255, 0]    # Yellow
+debug_color = [128, 255, 128]    # Light green
+
+# Panel layout
+top_panel_max_lines = 2
+bottom_panel_max_lines = 3
+panel_margin = 2  # Characters from screen edge

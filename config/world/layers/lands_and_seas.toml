@@ -1,0 +1,27 @@
+# Lands and Seas Layer Configuration
+# Controls the basic land/water distribution across the world
+
+[lands_and_seas]
+# Land ratio out of 10 (4 = 40% land, 6 = 60% water)
+land_ratio = 4
+
+# Algorithm to use for land/water determination
+# Options: "random_chunks", "perlin_noise", "cellular_automata"
+algorithm = "cellular_automata"
+
+# Random chunks algorithm settings
+[lands_and_seas.random_chunks]
+# No additional settings for now - uses simple per-chunk randomization
+
+# Future algorithm settings (not implemented yet)
+[lands_and_seas.perlin_noise]
+scale = 0.1
+octaves = 4
+persistence = 0.5
+lacunarity = 2.0
+
+[lands_and_seas.cellular_automata]
+initial_land_probability = 0.4
+iterations = 5
+birth_limit = 4
+death_limit = 3

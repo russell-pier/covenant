@@ -45,10 +45,11 @@ class TileConfig:
 
 class TileRegistry:
     """Registry for all tile configurations."""
-    
-    def __init__(self, config_file: str = "tiles.toml"):
+
+    def __init__(self, config_file: str = None):
         self.tiles: Dict[str, TileConfig] = {}
-        self.config_file = config_file
+        # Default to centralized config location
+        self.config_file = config_file or os.path.join("config", "tiles.toml")
         self.default_tile = TileConfig(
             name="Unknown",
             character="?",
@@ -60,16 +61,14 @@ class TileRegistry:
     def load_tiles(self):
         """Load tile configurations from the TOML file."""
         if not os.path.exists(self.config_file):
-            print(f"Warning: Tile config file '{self.config_file}' not found. Using defaults.")
-            self._create_default_tiles()
             return
-        
+
         try:
             with open(self.config_file, 'rb') as f:
                 config_data = tomllib.load(f)
-            
+
             self.tiles.clear()
-            
+
             for tile_id, tile_data in config_data.items():
                 try:
                     tile_config = TileConfig(
@@ -79,53 +78,22 @@ class TileRegistry:
                         background_color=tile_data.get('background_color', [0, 0, 0])
                     )
                     self.tiles[tile_id] = tile_config
-                except (ValueError, KeyError) as e:
-                    print(f"Warning: Invalid tile config for '{tile_id}': {e}")
+                except (ValueError, KeyError):
                     continue
-            
-            print(f"Loaded {len(self.tiles)} tile configurations from {self.config_file}")
-            
-        except Exception as e:
-            print(f"Error loading tile config from '{self.config_file}': {e}")
-            self._create_default_tiles()
+
+        except Exception:
+            pass
     
-    def _create_default_tiles(self):
-        """Create default tile configurations if config file is missing."""
-        self.tiles = {
-            'stone': TileConfig(
-                name="Stone",
-                character="█",
-                font_color=(200, 200, 200),
-                background_color=(64, 64, 64)
-            ),
-            'water': TileConfig(
-                name="Water",
-                character="█",
-                font_color=(64, 128, 255),
-                background_color=(64, 128, 255)
-            ),
-            'void': TileConfig(
-                name="Void",
-                character=" ",
-                font_color=(0, 0, 0),
-                background_color=(0, 0, 0)
-            ),
-            'center_marker': TileConfig(
-                name="Center Marker",
-                character=".",
-                font_color=(255, 255, 0),
-                background_color=(128, 128, 128)
-            )
-        }
-        print(f"Created {len(self.tiles)} default tile configurations")
+
+
     
     def get_tile_config(self, tile_id: str) -> TileConfig:
         """
         Get the configuration for a tile type.
-        
+
         Args:
             tile_id: The identifier for the tile type
-            
+
         Returns:
             TileConfig object with rendering information
         """
@@ -137,7 +105,6 @@ class TileRegistry:
     
     def reload_config(self):
         """Reload tile configurations from the file."""
-        print("Reloading tile configurations...")
         self.load_tiles()
     
     def add_tile_config(self, tile_id: str, config: TileConfig):

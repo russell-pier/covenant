@@ -8,7 +8,7 @@ Separated from game logic for better organization.
 
 import argparse
 import sys
-from src.game import run_game
+from src.engine.game import run_game
 
 
 def main():
@@ -35,17 +35,13 @@ Examples:
     if args.profiling:
         import src.profiler
         src.profiler.ENABLE_PROFILING = True
-        print("🔍 Performance profiling enabled")
 
     try:
         run_game()
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt received. Exiting gracefully...")
+        pass
     except Exception as e:
-        print(f"An error occurred: {e}")
         return 1
-    finally:
-        print("Application terminated.")
 
     return 0
 
