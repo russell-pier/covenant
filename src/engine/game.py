@@ -141,13 +141,37 @@ def run_game():
     # Initialize the console with configured size
     console = tcod.console.Console(_config.window.initial_width, _config.window.initial_height, order="F")
 
-    # Use default font for now - custom fonts can cause spacing issues
-    # The seamless rendering system handles gaps using background colors
+    # Create a minimal tileset programmatically to avoid font loading issues
+    import numpy as np
+
+    # Create a simple 8x8 tileset with basic characters
+    tile_width, tile_height = 8, 8
+    tileset = tcod.tileset.Tileset(tile_width, tile_height)
+
+    # Create a simple filled block character for tile 219 (█)
+    block_tile = np.ones((tile_height, tile_width), dtype=bool)
+    tileset.set_tile(ord('█'), block_tile)
+
+    # Create other basic characters
+    space_tile = np.zeros((tile_height, tile_width), dtype=bool)
+    tileset.set_tile(ord(' '), space_tile)
+
+    # Create X character for cursor
+    x_tile = np.zeros((tile_height, tile_width), dtype=bool)
+    x_tile[1, 1:7] = True  # Top-left to bottom-right diagonal
+    x_tile[2, 2:6] = True
+    x_tile[3, 3:5] = True
+    x_tile[4, 3:5] = True
+    x_tile[5, 2:6] = True
+    x_tile[6, 1:7] = True
+    tileset.set_tile(ord('X'), x_tile)
+
     with tcod.context.new_terminal(
         columns=console.width,
         rows=console.height,
         title=_config.application.title,
         vsync=_config.window.vsync,
+        tileset=tileset,
     ) as context:
         main_loop(context, console)
 
