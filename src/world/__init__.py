@@ -27,21 +27,37 @@ Usage:
     world_manager.shutdown()
 """
 
-from .world_manager import WorldManager
+# Core components (no config dependencies)
 from .tier_manager import TierManager
-from .worker import WorldGenerationWorker, Tile
 from .messages import MessageBus, Message, MessageType, Priority
 
-__all__ = [
-    'WorldManager',
-    'Tile',
-    'TierManager',
-    'WorldGenerationWorker',
-    'MessageBus',
-    'Message',
-    'MessageType',
-    'Priority'
-]
+# Components that require config (import conditionally)
+try:
+    from .world_manager import WorldManager
+    from .worker import WorldGenerationWorker, Tile
+    _FULL_SYSTEM_AVAILABLE = True
+except ImportError:
+    _FULL_SYSTEM_AVAILABLE = False
+
+if _FULL_SYSTEM_AVAILABLE:
+    __all__ = [
+        'WorldManager',
+        'Tile',
+        'TierManager',
+        'WorldGenerationWorker',
+        'MessageBus',
+        'Message',
+        'MessageType',
+        'Priority'
+    ]
+else:
+    __all__ = [
+        'TierManager',
+        'MessageBus',
+        'Message',
+        'MessageType',
+        'Priority'
+    ]
 
 __version__ = '1.0.0'
 __author__ = 'Covenant World Generation Team'

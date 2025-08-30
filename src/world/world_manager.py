@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple, Optional, Set
 from ..config import WorldConfig
 from .worker import WorldGenerationWorker, Tile
 from .tier_manager import TierManager
-from .dual_chunk_system import DualChunkManager
+# Removed dual chunk system - now using fixed 16x16 chunks
 from .messages import MessageBus
 
 
@@ -24,10 +24,8 @@ class WorldManager:
         self.config = world_config
         self._lock = threading.Lock()
 
-        # Initialize dual chunk system
-        self.dual_chunk_manager = DualChunkManager(
-            render_chunk_size=world_config.chunk_size
-        )
+        # Fixed chunk system - all chunks are the same size
+        self.chunk_size = world_config.chunk_size
 
         # Initialize message bus for worker communication
         self.message_bus = MessageBus()

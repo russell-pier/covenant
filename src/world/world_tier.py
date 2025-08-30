@@ -7,15 +7,22 @@ Manages the world-scale generation layers.
 
 from typing import List, Tuple, Dict, Any
 
-from src.world.layers.add_islands.layer import IslandsLayer
 from .pipeline import GenerationPipeline
-from .layers.lands_and_seas import LandsAndSeasLayer
-from .layers.zoom import ZoomLayer
+from .layers.continental import ContinentalLayer
+from .layers.regional import RegionalLayer
+from .layers.local import LocalLayer
+from .layers.tiles import TilesLayer
 
 
 class WorldTier:
     """
-    Factory for creating world tier pipelines with configured layers.
+    Factory for creating world tier pipelines with multi-scale sampling layers.
+
+    Creates pipelines using the new fixed-chunk system:
+    - Continental: Region-level sampling (4x4 chunks)
+    - Regional: Chunk-level sampling
+    - Local: Sub-chunk sampling
+    - Tiles: Final tile placement
     """
     
 
@@ -33,17 +40,19 @@ class WorldTier:
         pipeline = GenerationPipeline("world_tier")
 
         for layer_name, config in layer_configs:
-            if layer_name == "lands_and_seas":
-                layer = LandsAndSeasLayer(config)
+            if layer_name == "continental":
+                layer = ContinentalLayer(layer_name, config)
                 pipeline.add_layer(layer)
-            elif layer_name == "zoom":
-                layer = ZoomLayer(config)
+            elif layer_name == "regional":
+                layer = RegionalLayer(layer_name, config)
                 pipeline.add_layer(layer)
-            elif layer_name == "islands":
-                layer = IslandsLayer(config)
+            elif layer_name == "local":
+                layer = LocalLayer(layer_name, config)
                 pipeline.add_layer(layer)
-            # Add other layer types here as they're implemented
+            elif layer_name == "tiles":
+                layer = TilesLayer(layer_name, config)
+                pipeline.add_layer(layer)
             else:
-                raise ValueError(f"Unknown world tier layer: {layer_name}")
+                raise ValueError(f"Unknown world tier layer: {layer_name}. Available layers: continental, regional, local, tiles")
 
         return pipeline

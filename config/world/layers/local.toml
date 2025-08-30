@@ -1,0 +1,21 @@
+# Local Layer Configuration
+# Operates at sub-chunk resolution to generate detailed coastlines and terrain
+
+# Sampling parameters
+sampling_resolution = 8  # Number of samples per chunk dimension (8x8 = 64 samples per 16x16 chunk)
+noise_scale = 0.5  # Scale factor for noise sampling (higher = more detail)
+
+# Coastal detail parameters
+coastal_detail_iterations = 3  # Number of iterations for coastal erosion/expansion
+erosion_probability = 0.1  # Probability of coastal erosion per iteration
+expansion_probability = 0.2  # Probability of coastal expansion per iteration
+
+# Advanced parameters
+use_fractal_noise = true  # Whether to use multiple octaves of noise
+fractal_octaves = 3  # Number of noise octaves if fractal is enabled
+fractal_persistence = 0.5  # Persistence between octaves
+
+# Terrain variation
+terrain_variation = 0.2  # Amount of random variation in terrain boundaries
+use_cellular_automata = true  # Whether to apply cellular automata rules
+ca_iterations = 2  # Number of cellular automata iterations

@@ -12,7 +12,7 @@ from typing import Dict, Set, Optional, Tuple
 from collections import OrderedDict
 
 from .messages import MessageBus, Message, MessageType, Priority
-from .dual_chunk_system import DualChunkManager, GenerationChunk, RenderChunk
+# Removed dual chunk system - now using fixed chunks
 from .tier_manager import TierManager
 from .pipeline import GenerationData
 from ..config import WorldConfig

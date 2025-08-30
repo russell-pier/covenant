@@ -1,0 +1,17 @@
+# Continental Layer Configuration
+# Operates on 4x4 chunk regions to create large-scale continent/ocean patterns
+
+# Region size in chunks (4x4 chunks = 64x64 tiles per region)
+region_size = 4
+
+# Noise sampling parameters
+noise_scale = 0.01  # Scale factor for noise sampling (smaller = larger features)
+
+# Continental designation thresholds
+continent_threshold = 0.3  # Base threshold for continent vs ocean
+land_ratio = 0.3  # Target ratio of land regions (0.3 = 30% land, 70% ocean)
+
+# Advanced parameters
+use_fractal_noise = false  # Whether to use multiple octaves of noise
+fractal_octaves = 3  # Number of noise octaves if fractal is enabled
+fractal_persistence = 0.5  # Persistence between octaves

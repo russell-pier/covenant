@@ -1,0 +1,23 @@
+# Tiles Layer Configuration
+# Converts multi-scale sampling data to final tile types
+
+# Basic tile types
+default_land_tile = "grass"
+default_water_tile = "water"
+coastal_tile = "sand"
+deep_water_tile = "deep_water"
+
+# Advanced tile placement
+use_biomes = false  # Whether to use biome-based tile selection
+use_elevation = false  # Whether to consider elevation for tile selection
+use_temperature = false  # Whether to consider temperature for tile selection
+
+# Special tile placement
+ore_placement_enabled = false  # Whether to place ore tiles
+ore_probability = 0.01  # Probability of ore placement in land tiles
+vegetation_enabled = false  # Whether to place vegetation tiles
+vegetation_probability = 0.3  # Probability of vegetation on land tiles
+
+# Tile variation
+use_tile_variants = false  # Whether to use multiple variants of the same tile type
+variant_probability = 0.2  # Probability of using a variant instead of base tile
