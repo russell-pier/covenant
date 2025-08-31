@@ -42,3 +42,9 @@ name = "Sand"
 character = "█"
 font_color = [238, 203, 173]  # Sandy brown (not used in seamless mode)
 background_color = [238, 203, 173]  # Sandy brown - this fills the entire cell seamlessly
+
+[deep_water]
+name = "Deep Water"
+character = "█"
+font_color = [0, 0, 139]  # Dark blue (not used in seamless mode)
+background_color = [0, 0, 139]  # Dark blue - this fills the entire cell seamlessly
